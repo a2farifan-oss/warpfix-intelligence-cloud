@@ -138,6 +138,11 @@ DO $$ BEGIN
   ALTER TABLE repositories ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
   ALTER TABLE installations ADD COLUMN IF NOT EXISTS installer_github_id INTEGER;
   ALTER TABLE installations ADD COLUMN IF NOT EXISTS installer_login VARCHAR(255);
+  -- Honest metrics: whether the sandbox pass was a REAL test run, and whether
+  -- the customer actually accepted (merged) the PR vs closed/ignored it.
+  ALTER TABLE repairs ADD COLUMN IF NOT EXISTS sandbox_verified BOOLEAN DEFAULT FALSE;
+  ALTER TABLE repairs ADD COLUMN IF NOT EXISTS pr_state VARCHAR(20);
+  ALTER TABLE repairs ADD COLUMN IF NOT EXISTS accepted BOOLEAN;
 EXCEPTION WHEN OTHERS THEN NULL;
 END $$;
 

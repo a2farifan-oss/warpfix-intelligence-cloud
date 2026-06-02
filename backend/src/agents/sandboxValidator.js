@@ -115,40 +115,118 @@ async function executeValidate({ patch, repository, installation_id, workflow_ru
     }
     steps.apply = true;
 
-    // Need a test script to validate against.
-    let pkg;
-    try {
-      pkg = JSON.parse(await fs.promises.readFile(path.join(dir, 'package.json'), 'utf8'));
-    } catch {
-      return null; // not a node project we can run — fall back
-    }
-    if (!pkg.scripts || !pkg.scripts.test) return null;
-
-    const hasLock = fs.existsSync(path.join(dir, 'package-lock.json'));
-    const hasDeps = (pkg.dependencies && Object.keys(pkg.dependencies).length) ||
-                    (pkg.devDependencies && Object.keys(pkg.devDependencies).length);
-    if (hasDeps) {
-      const install = await run('npm', [hasLock ? 'ci' : 'install', '--no-audit', '--no-fund', '--no-progress'], { cwd: dir, timeout: 240000 });
-      if (install.code !== 0) {
-        logger.warn('Sandbox npm install failed', { code: install.code });
-        return null; // dependency/infra problem, not the patch's fault — fall back
-      }
-    }
-    steps.install = true;
-
-    const test = await run('npm', ['test', '--silent'], { cwd: dir, timeout: 180000 });
-    steps.test = test.code === 0;
+    // Run the project's REAL test suite, language-aware. Only a genuine test
+    // run sets verified:true. If the toolchain isn't available on this host, or
+    // the project has no runnable test command, we return null so the caller
+    // falls back to the lightweight check (verified:false) — never a false green.
+    const exec = await runProjectTests(dir, steps);
+    if (!exec) return null;
 
     return {
-      passed: test.code === 0,
+      passed: exec.passed,
       verified: true,
       method: 'execute',
+      language: exec.language,
       steps,
-      output: test.out.slice(-2000),
+      output: (exec.output || '').slice(-2000),
     };
   } finally {
     fs.promises.rm(dir, { recursive: true, force: true }).catch(() => {});
   }
+}
+
+// A spawn that couldn't find the binary resolves with code -1 and an ENOENT-ish
+// message — treat that as "toolchain unavailable" (fall back) rather than a
+// failing test.
+function toolchainMissing(res) {
+  return res.code === -1 && /spawn error|ENOENT|not found/i.test(res.out || '');
+}
+
+// Detect the ecosystem from marker files and run install + test with the right
+// tool. Returns { passed, language, output } when a real run happened, else null.
+async function runProjectTests(dir, steps) {
+  const has = (f) => fs.existsSync(path.join(dir, f));
+
+  // ---- Node / JS / TS ----
+  if (has('package.json')) {
+    let pkg;
+    try { pkg = JSON.parse(await fs.promises.readFile(path.join(dir, 'package.json'), 'utf8')); } catch { return null; }
+    if (!pkg.scripts || !pkg.scripts.test) return null;
+    const usePnpm = has('pnpm-lock.yaml');
+    const useYarn = has('yarn.lock');
+    const hasLock = has('package-lock.json');
+    const mgr = usePnpm ? 'pnpm' : useYarn ? 'yarn' : 'npm';
+    const installArgs = usePnpm ? ['install', '--no-frozen-lockfile']
+      : useYarn ? ['install']
+      : [hasLock ? 'ci' : 'install', '--no-audit', '--no-fund', '--no-progress'];
+    const hasDeps = (pkg.dependencies && Object.keys(pkg.dependencies).length) ||
+                    (pkg.devDependencies && Object.keys(pkg.devDependencies).length);
+    if (hasDeps) {
+      const install = await run(mgr, installArgs, { cwd: dir, timeout: 240000 });
+      if (toolchainMissing(install)) return null;
+      if (install.code !== 0) { logger.warn('Sandbox install failed', { mgr, code: install.code }); return null; }
+    }
+    steps.install = true;
+    const test = await run(mgr, mgr === 'npm' ? ['test', '--silent'] : ['test'], { cwd: dir, timeout: 180000 });
+    if (toolchainMissing(test)) return null;
+    steps.test = test.code === 0;
+    return { passed: test.code === 0, language: 'node', output: test.out };
+  }
+
+  // ---- Python ----
+  if (has('pytest.ini') || has('pyproject.toml') || has('setup.py') || has('requirements.txt') || has('tox.ini')) {
+    if (has('requirements.txt')) {
+      const pip = await run('pip', ['install', '-r', 'requirements.txt', '-q'], { cwd: dir, timeout: 240000 });
+      if (toolchainMissing(pip)) return null;
+    }
+    const test = await run('python', ['-m', 'pytest', '-q'], { cwd: dir, timeout: 180000 });
+    if (toolchainMissing(test)) return null;
+    // pytest exit 5 = "no tests collected" → not a real validation, fall back.
+    if (test.code === 5) return null;
+    steps.install = true; steps.test = test.code === 0;
+    return { passed: test.code === 0, language: 'python', output: test.out };
+  }
+
+  // ---- Go ----
+  if (has('go.mod')) {
+    const test = await run('go', ['test', './...'], { cwd: dir, timeout: 180000 });
+    if (toolchainMissing(test)) return null;
+    steps.install = true; steps.test = test.code === 0;
+    return { passed: test.code === 0, language: 'go', output: test.out };
+  }
+
+  // ---- Rust ----
+  if (has('Cargo.toml')) {
+    const test = await run('cargo', ['test', '--quiet'], { cwd: dir, timeout: 240000 });
+    if (toolchainMissing(test)) return null;
+    steps.install = true; steps.test = test.code === 0;
+    return { passed: test.code === 0, language: 'rust', output: test.out };
+  }
+
+  // ---- .NET ----
+  const hasDotnet = fs.readdirSync(dir).some((f) => /\.(csproj|sln|fsproj)$/.test(f));
+  if (hasDotnet) {
+    const test = await run('dotnet', ['test', '--nologo', '--verbosity', 'quiet'], { cwd: dir, timeout: 300000 });
+    if (toolchainMissing(test)) return null;
+    steps.install = true; steps.test = test.code === 0;
+    return { passed: test.code === 0, language: 'dotnet', output: test.out };
+  }
+
+  // ---- Java / Maven / Gradle ----
+  if (has('pom.xml')) {
+    const test = await run('mvn', ['-q', 'test'], { cwd: dir, timeout: 300000 });
+    if (toolchainMissing(test)) return null;
+    steps.install = true; steps.test = test.code === 0;
+    return { passed: test.code === 0, language: 'maven', output: test.out };
+  }
+  if (has('build.gradle') || has('build.gradle.kts')) {
+    const test = await run('./gradlew', ['test', '--quiet'], { cwd: dir, timeout: 300000 });
+    if (toolchainMissing(test)) return null;
+    steps.install = true; steps.test = test.code === 0;
+    return { passed: test.code === 0, language: 'gradle', output: test.out };
+  }
+
+  return null; // unknown ecosystem — fall back to lightweight (unverified)
 }
 
 async function lightweightValidate(patch, repository) {

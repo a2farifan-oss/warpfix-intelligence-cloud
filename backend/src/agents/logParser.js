@@ -85,26 +85,51 @@ async function fetchCILogs(workflowRun, installationId, repository) {
   }
 }
 
-// The job-logs endpoint 302-redirects to a short-lived blob URL and may return
-// the body as text or as binary depending on the Octokit build. Handle all
-// cases (and the redirect surfacing as an error) so logs are actually retrieved.
+// The job-logs endpoint 302-redirects to a short-lived, pre-signed blob URL.
+// Auto-following the redirect re-sends the GitHub Authorization header to the
+// storage backend, which the installation token gets rejected by — so the logs
+// come back empty. Instead resolve the redirect manually and download the blob
+// with NO auth header (the URL is already signed). Falls back to whatever the
+// auto-followed response yielded for Octokit builds that return text directly.
 async function fetchJobLog(octokit, owner, repo, jobId) {
   try {
     const resp = await octokit.request('GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs', {
       owner, repo, job_id: jobId,
+      request: { redirect: 'manual' },
     });
-    return normalizeLogBody(resp);
+    const location = resp?.headers?.location;
+    if (resp.status >= 300 && resp.status < 400 && location) {
+      const text = await downloadText(location);
+      if (text) return text;
+    }
+    const body = normalizeLogBody(resp);
+    if (body) return body;
+    if (location) {
+      const text = await downloadText(location);
+      if (text) return text;
+    }
+    logger.warn('CI job logs empty after redirect', { repo: `${owner}/${repo}`, job_id: jobId, status: resp.status });
+    return '';
   } catch (err) {
     const loc = err?.response?.headers?.location || err?.response?.url || err?.url;
     if (loc) {
-      try {
-        const r = await fetch(loc);
-        if (r.ok) return await r.text();
-      } catch (_) { /* fall through */ }
+      const text = await downloadText(loc);
+      if (text) return text;
     }
     logger.warn('Job log fetch failed', { repo: `${owner}/${repo}`, job_id: jobId, error: err.message });
     return '';
   }
+}
+
+async function downloadText(url) {
+  try {
+    const r = await fetch(url); // no auth header — the blob URL is pre-signed
+    if (r.ok) return await r.text();
+    logger.warn('Log blob download non-OK', { status: r.status });
+  } catch (err) {
+    logger.warn('Log blob download threw', { error: err.message });
+  }
+  return '';
 }
 
 function normalizeLogBody(resp) {

@@ -250,6 +250,15 @@ async function processRepairJob(job) {
       duration_ms: duration,
     };
   } catch (err) {
+    // An exhausted per-day LLM budget won't recover within BullMQ's retry window,
+    // so rethrowing just burns the remaining attempts (re-running classify/patch
+    // for nothing). Skip cleanly; the next CI failure will repair once it resets.
+    if (err.code === 'LLM_DAILY_LIMIT') {
+      logger.warn('Skipping repair: LLM daily token limit reached', {
+        jobId, repo: repository?.full_name,
+      });
+      return { status: 'skipped', reason: 'llm_daily_limit', pr_url: null };
+    }
     logger.error('Repair job failed', { jobId, error: err.message, stack: err.stack });
     throw err;
   }

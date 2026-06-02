@@ -119,12 +119,22 @@ async function callPageGrid({ system, user, maxTokens }) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// Parse the "try again in 1.63s" hint Groq returns on rate limits; fall back to
-// exponential backoff when no hint is present.
+// Parse the "try again in 1.63s" / "try again in 2h4m43.968s" hint Groq returns
+// on rate limits; fall back to exponential backoff when no hint is present.
 function retryDelayMs(errMessage, attempt) {
-  const m = /try again in ([\d.]+)s/i.exec(errMessage || '');
-  if (m) return Math.ceil(parseFloat(m[1]) * 1000) + 250;
+  const m = /try again in (?:(\d+)h)?(?:(\d+)m)?([\d.]+)s/i.exec(errMessage || '');
+  if (m) {
+    const ms = ((parseInt(m[1], 10) || 0) * 3600 + (parseInt(m[2], 10) || 0) * 60 + parseFloat(m[3])) * 1000;
+    return Math.ceil(ms) + 250;
+  }
   return Math.min(8000, 500 * 2 ** attempt);
+}
+
+// A per-day (TPD) rate limit won't clear within an in-process backoff (Groq
+// reports waits of minutes-to-hours), so retrying just spins doomed attempts and
+// re-runs upstream LLM steps. Treat it as a distinct, non-retryable condition.
+function isDailyLimit(errMessage) {
+  return /tokens per day|\bTPD\b/i.test(errMessage || '');
 }
 
 async function callLLM({ system, user, maxTokens = 2000 }) {
@@ -148,6 +158,11 @@ async function callLLM({ system, user, maxTokens = 2000 }) {
     } catch (err) {
       lastErr = err;
       const isRateLimit = /\b429\b/.test(err.message) || /rate limit/i.test(err.message);
+      if (isRateLimit && isDailyLimit(err.message)) {
+        logger.warn('LLM daily token limit reached; not retrying', { provider });
+        err.code = 'LLM_DAILY_LIMIT';
+        throw err;
+      }
       if (isRateLimit && attempt < maxAttempts - 1) {
         const delay = retryDelayMs(err.message, attempt);
         logger.warn('LLM rate limited, backing off', { provider, attempt: attempt + 1, delay });

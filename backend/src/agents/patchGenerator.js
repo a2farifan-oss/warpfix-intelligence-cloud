@@ -65,7 +65,11 @@ Rules:
 - You MUST output at least one ===FILE: ...=== / ===END_FILE=== block
 - Do NOT wrap the file blocks in markdown code fences`,
     user: prompt,
-    maxTokens: 8000,
+    // The completion only needs to hold the rewritten source file(s). 8000 was
+    // wildly over-reserved: Groq bills max_tokens against the per-day budget, so
+    // it capped the free tier at ~11 repairs/day. 4000 covers normal source
+    // files and ~doubles daily throughput. Override via PATCH_MAX_TOKENS.
+    maxTokens: parseInt(process.env.PATCH_MAX_TOKENS, 10) || 4000,
   });
 
   let patch;

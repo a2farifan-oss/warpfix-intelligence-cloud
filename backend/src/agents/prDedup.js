@@ -12,25 +12,33 @@ const { logger } = require('../utils/logger');
 //   - if one was MERGED     → allow (the failure recurred after acceptance — a
 //     genuinely new occurrence worth a fresh attempt)
 
+const DEDUP_MAX_PAGES = parseInt(process.env.WARPFIX_DEDUP_MAX_PAGES, 10) || 5;
+
 async function inspectExistingWarpfixPRs(octokit, owner, repo, fingerprintHash) {
   const prefix = `warpfix/${fingerprintHash}-`;
   const result = { open: 0, closedUnmerged: 0, merged: 0, openUrls: [] };
   try {
-    // Look at recent PRs (all states). 100 is plenty — loops manifest fast.
-    const resp = await octokit.request('GET /repos/{owner}/{repo}/pulls', {
-      owner, repo, state: 'all', per_page: 100, sort: 'created', direction: 'desc',
-    });
-    for (const pr of resp.data) {
-      const ref = pr.head?.ref || '';
-      if (!ref.startsWith(prefix)) continue;
-      if (pr.state === 'open') {
-        result.open += 1;
-        result.openUrls.push(pr.html_url);
-      } else if (pr.merged_at) {
-        result.merged += 1;
-      } else {
-        result.closedUnmerged += 1;
+    // Walk recent PRs (all states), newest first. A single 100-PR page used to
+    // be enough, but a busy repo can have >100 PRs created after the WarpFix
+    // one — pushing it out of the window and letting the loop guard be bypassed.
+    // Paginate up to DEDUP_MAX_PAGES (default 500 PRs) to keep the guard robust.
+    for (let page = 1; page <= DEDUP_MAX_PAGES; page++) {
+      const resp = await octokit.request('GET /repos/{owner}/{repo}/pulls', {
+        owner, repo, state: 'all', per_page: 100, page, sort: 'created', direction: 'desc',
+      });
+      for (const pr of resp.data) {
+        const ref = pr.head?.ref || '';
+        if (!ref.startsWith(prefix)) continue;
+        if (pr.state === 'open') {
+          result.open += 1;
+          result.openUrls.push(pr.html_url);
+        } else if (pr.merged_at) {
+          result.merged += 1;
+        } else {
+          result.closedUnmerged += 1;
+        }
       }
+      if (resp.data.length < 100) break; // last page reached
     }
   } catch (err) {
     // Fail OPEN (allow the repair) — a listing error must not block a real fix.

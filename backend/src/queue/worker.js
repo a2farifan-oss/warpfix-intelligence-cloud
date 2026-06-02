@@ -13,6 +13,7 @@ const { generatePatch } = require('../agents/patchGenerator');
 const { isUnparseable, isPlaceholderPatch, patchAppliesToRepo } = require('../agents/patchGuards');
 const { classifyActionability } = require('../agents/actionability');
 const { inspectExistingWarpfixPRs, dedupDecision } = require('../agents/prDedup');
+const { acquireRepairLock, releaseRepairLock, checkRepoDailyCap } = require('./guards');
 const { postInfraDiagnostic } = require('../agents/diagnostics');
 const { validateInSandbox } = require('../agents/sandboxValidator');
 const { computeConfidence } = require('../agents/confidenceEngine');
@@ -30,6 +31,9 @@ async function processRepairJob(job) {
 
   logger.info('Processing repair job', { jobId, type });
 
+  // Released in `finally`. Guards against the concurrency race where two
+  // simultaneous deliveries of the same failure both open a PR.
+  let repairLock = { acquired: true, key: null };
   try {
     // Step 1: Parse logs
     job.updateProgress(10);
@@ -58,6 +62,21 @@ async function processRepairJob(job) {
     // Step 3: Generate fingerprint
     job.updateProgress(30);
     const fingerprint = generateFingerprint(logData, classification);
+
+    // Guard: ATOMIC in-flight lock. The GitHub PR-dedup below is not atomic and
+    // the worker runs concurrency > 1, so two simultaneous deliveries of the
+    // same failure could both pass it and open duplicate PRs. Claiming the
+    // (repo, fingerprint) lock first closes that race; the lock auto-expires so
+    // a crash never wedges a fingerprint. Fails open if Redis is down.
+    if (repository?.id) {
+      repairLock = await acquireRepairLock(repository.id, fingerprint.hash);
+      if (!repairLock.acquired) {
+        logger.warn('Skipping repair: another worker is already handling this failure', {
+          jobId, repo: repository?.full_name, hash: fingerprint.hash,
+        });
+        return { status: 'skipped', reason: 'concurrent_in_flight', pr_url: null };
+      }
+    }
 
     // Guard: only attempt a SOURCE-CODE repair on a genuine code bug. Infra/
     // config failures (missing env vars, submodule URLs, network, dependency
@@ -116,6 +135,21 @@ async function processRepairJob(job) {
       patch = existingFix.resolution_patch;
       reusedFingerprint = true;
     } else {
+      // Guard: per-repo daily LLM-repair backstop. Dedup only stops IDENTICAL
+      // failures; a repo emitting many DISTINCT failures could still drive a
+      // large number of LLM repairs. This coarse ceiling (well above normal
+      // volume) protects the shared free quota. Only counts real LLM repairs,
+      // not cache reuse. Disabled with WARPFIX_REPO_DAILY_CAP=0.
+      if (repository?.id) {
+        const cap = await checkRepoDailyCap(repository.id);
+        if (cap.exceeded) {
+          logger.warn('Skipping repair: per-repo daily LLM cap reached', {
+            jobId, repo: repository?.full_name, count: cap.count, cap: cap.cap,
+          });
+          return { status: 'skipped', reason: 'repo_daily_cap', pr_url: null };
+        }
+      }
+
       // Step 5: Generate patch via LLM (also covers the case where a cached patch
       // was a placeholder or targeted a different repo's files).
       job.updateProgress(50);
@@ -315,6 +349,9 @@ async function processRepairJob(job) {
     }
     logger.error('Repair job failed', { jobId, error: err.message, stack: err.stack });
     throw err;
+  } finally {
+    // Always release the in-flight lock, on success, skip, or throw.
+    if (repairLock.key) await releaseRepairLock(repairLock.key);
   }
 }
 

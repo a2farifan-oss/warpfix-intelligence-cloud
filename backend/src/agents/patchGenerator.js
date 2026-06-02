@@ -67,7 +67,9 @@ Rules:
 - Never add console.log or debug statements
 - Never create new files - only modify existing source files
 - Include ALL original file content, only changing what's needed to fix the error
+- Fix the ROOT CAUSE, not just the failing assertion (e.g. if a parser returns the wrong type, fix it at the source so every downstream operation is correct)
 - You MUST output at least one ===FILE: ...=== / ===END_FILE=== block
+- The reference files below are wrapped in >>>>> BEGIN ... <<<<< delimiters; that is INPUT formatting only. Do NOT copy that style. Your output MUST use ===FILE: path=== / ===END_FILE===
 - Do NOT wrap the file blocks in markdown code fences`,
     user: prompt,
     // The completion only needs to hold the rewritten source file(s). 8000 was
@@ -177,14 +179,18 @@ function buildPatchPrompt(logData, classification, context, sourceFiles = {}) {
     prompt += `Affected files: ${logData.affectedFiles.join(', ')}\n\n`;
   }
 
-  // Include actual source file contents for accurate patching
+  // Include actual source file contents for accurate patching. The delimiter
+  // here MUST NOT look like the required output marker (===FILE: path===).
+  // Weaker models (e.g. the free GitHub Models fallback) otherwise echo this
+  // input delimiter verbatim, so parseFileBlocks finds no ===FILE: blocks and
+  // the repair ships nothing ("No committable source files").
   const fileEntries = Object.entries(sourceFiles);
   if (fileEntries.length > 0) {
-    prompt += `\n--- CURRENT SOURCE FILES ---\n`;
+    prompt += `\n----- CURRENT SOURCE FILES (read-only, for reference) -----\n`;
     for (const [path, content] of fileEntries) {
-      prompt += `\n=== ${path} ===\n${content.substring(0, 4000)}\n`;
+      prompt += `\n>>>>> BEGIN ${path} >>>>>\n${content.substring(0, 4000)}\n<<<<< END ${path} <<<<<\n`;
     }
-    prompt += `--- END SOURCE FILES ---\n\n`;
+    prompt += `----- END SOURCE FILES -----\n\n`;
   }
 
   if (classification.suggestedApproach) {
@@ -209,9 +215,10 @@ function parseFileBlocks(llmOutput) {
   // Strip a single outer ``` ... ``` wrapper so the FILE markers are reachable.
   let text = llmOutput.trim();
   const outerFence = text.match(/^```[\w-]*\n([\s\S]*?)\n```$/);
-  if (outerFence && /===FILE:/.test(outerFence[1])) text = outerFence[1];
+  if (outerFence && /===\s*FILE:/i.test(outerFence[1])) text = outerFence[1];
 
-  const regex = /===FILE:\s*(.+?)===\n([\s\S]*?)===END_FILE===/g;
+  // Tolerate spacing around the marker: "===FILE: path===" / "=== FILE : path ==="
+  const regex = /===\s*FILE\s*:\s*(.+?)\s*===\n([\s\S]*?)===\s*END_FILE\s*===/gi;
   let match;
   while ((match = regex.exec(text)) !== null) {
     const path = match[1].trim();
@@ -224,10 +231,25 @@ function parseFileBlocks(llmOutput) {
   // Tolerate a truncated final block (model hit max_tokens before ===END_FILE===):
   // capture the last opened FILE block that was never closed.
   if (files.length === 0) {
-    const open = text.match(/===FILE:\s*(.+?)===\n([\s\S]*)$/);
-    if (open && !/===END_FILE===/.test(open[2])) {
+    const open = text.match(/===\s*FILE\s*:\s*(.+?)\s*===\n([\s\S]*)$/i);
+    if (open && !/===\s*END_FILE\s*===/i.test(open[2])) {
       const path = open[1].trim();
       const content = stripContentFence(open[2].trim());
+      if (path && content) files.push({ path, content });
+    }
+  }
+
+  // Safety net: weaker models sometimes drop the "FILE:" keyword and emit the
+  // file path with bare "=== path ===" headers (mimicking the reference-file
+  // delimiter). Only used when no proper ===FILE: blocks were found. We accept a
+  // header only if it looks like a real source path (has a file extension), and
+  // capture its content up to the next "=== ... ===" header / END marker / EOF.
+  if (files.length === 0) {
+    const bare = /===\s*([^\n=]+?\.[a-z0-9]{1,8})\s*===\r?\n([\s\S]*?)(?=\r?\n===\s*[^\n]+?===|\r?\n?===\s*END_FILE\s*===|$)/gi;
+    let m2;
+    while ((m2 = bare.exec(text)) !== null) {
+      const path = m2[1].trim();
+      const content = stripContentFence(m2[2].trim());
       if (path && content) files.push({ path, content });
     }
   }

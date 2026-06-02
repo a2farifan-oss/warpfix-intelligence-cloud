@@ -1,0 +1,146 @@
+{
+  "baseline": {
+    "type_coercion": {
+      "pass": 8,
+      "total": 8
+    },
+    "async_missing_await": {
+      "pass": 8,
+      "total": 8
+    },
+    "null_safety": {
+      "pass": 0,
+      "total": 8
+    },
+    "off_by_one": {
+      "pass": 6,
+      "total": 8
+    },
+    "array_mutation": {
+      "pass": 8,
+      "total": 8
+    },
+    "float_precision": {
+      "pass": 8,
+      "total": 8
+    },
+    "regex_extract": {
+      "pass": 1,
+      "total": 8
+    },
+    "date_arithmetic": {
+      "pass": 8,
+      "total": 8
+    },
+    "recursion_base": {
+      "pass": 7,
+      "total": 8
+    },
+    "error_handling": {
+      "pass": 8,
+      "total": 8
+    },
+    "closure_scope": {
+      "pass": 8,
+      "total": 8
+    },
+    "comparison_operator": {
+      "pass": 8,
+      "total": 8
+    },
+    "string_boundary": {
+      "pass": 8,
+      "total": 8
+    },
+    "multi_file_single_root": {
+      "pass": 5,
+      "total": 8
+    },
+    "multi_file_multi_root": {
+      "pass": 8,
+      "total": 8
+    }
+  },
+  "retrieval": {
+    "type_coercion": {
+      "pass": 8,
+      "total": 8
+    },
+    "async_missing_await": {
+      "pass": 8,
+      "total": 8
+    },
+    "null_safety": {
+      "pass": 8,
+      "total": 8
+    },
+    "off_by_one": {
+      "pass": 8,
+      "total": 8
+    },
+    "array_mutation": {
+      "pass": 8,
+      "total": 8
+    },
+    "float_precision": {
+      "pass": 8,
+      "total": 8
+    },
+    "regex_extract": {
+      "pass": 8,
+      "total": 8
+    },
+    "date_arithmetic": {
+      "pass": 8,
+      "total": 8
+    },
+    "recursion_base": {
+      "pass": 8,
+      "total": 8
+    },
+    "error_handling": {
+      "pass": 8,
+      "total": 8
+    },
+    "closure_scope": {
+      "pass": 8,
+      "total": 8
+    },
+    "comparison_operator": {
+      "pass": 8,
+      "total": 8
+    },
+    "string_boundary": {
+      "pass": 8,
+      "total": 8
+    },
+    "multi_file_single_root": {
+      "pass": 8,
+      "total": 8
+    },
+    "multi_file_multi_root": {
+      "pass": 8,
+      "total": 8
+    }
+  },
+  "overall": {
+    "baseline": {
+      "p": 99,
+      "t": 120,
+      "rate": 0.825
+    },
+    "retrieval": {
+      "p": 120,
+      "t": 120,
+      "rate": 1
+    }
+  },
+  "flips": 21,
+  "flipsByCategory": {
+    "null_safety": 8,
+    "off_by_one": 2,
+    "regex_extract": 7,
+    "recursion_base": 1,
+    "multi_file_single_root": 3
+  }
+}

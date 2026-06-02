@@ -1,0 +1,72 @@
+{
+  "overall": {
+    "pass": 46,
+    "total": 60,
+    "rate": 0.7667
+  },
+  "byCategory": {
+    "type_coercion": {
+      "pass": 4,
+      "total": 4
+    },
+    "async_missing_await": {
+      "pass": 4,
+      "total": 4
+    },
+    "null_safety": {
+      "pass": 0,
+      "total": 4
+    },
+    "off_by_one": {
+      "pass": 3,
+      "total": 4
+    },
+    "array_mutation": {
+      "pass": 3,
+      "total": 4
+    },
+    "float_precision": {
+      "pass": 4,
+      "total": 4
+    },
+    "regex_extract": {
+      "pass": 1,
+      "total": 4
+    },
+    "date_arithmetic": {
+      "pass": 4,
+      "total": 4
+    },
+    "recursion_base": {
+      "pass": 3,
+      "total": 4
+    },
+    "error_handling": {
+      "pass": 4,
+      "total": 4
+    },
+    "closure_scope": {
+      "pass": 4,
+      "total": 4
+    },
+    "comparison_operator": {
+      "pass": 4,
+      "total": 4
+    },
+    "string_boundary": {
+      "pass": 4,
+      "total": 4
+    },
+    "multi_file_single_root": {
+      "pass": 0,
+      "total": 4
+    },
+    "multi_file_multi_root": {
+      "pass": 4,
+      "total": 4
+    }
+  },
+  "parsedOk": 60,
+  "emptyParse": 0,
+  "verifiedCount": 46
+}

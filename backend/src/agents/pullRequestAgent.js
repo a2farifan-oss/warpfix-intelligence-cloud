@@ -1,7 +1,7 @@
 const { logger } = require('../utils/logger');
 const { getInstallationOctokit } = require('../services/github');
 
-async function createPullRequest({ patch, repository, installation_id, classification, confidence, fingerprint }) {
+async function createPullRequest({ patch, repository, installation_id, classification, confidence, fingerprint, workflow_run }) {
   logger.info('Creating pull request', { repo: repository?.full_name, confidence: confidence.score });
 
   if (!installation_id || !repository) {
@@ -13,22 +13,28 @@ async function createPullRequest({ patch, repository, installation_id, classific
     const octokit = await getInstallationOctokit(installation_id);
     const owner = repository.owner;
     const repo = repository.name;
-    const baseBranch = repository.default_branch || 'main';
+    // Target the branch whose CI failed (where the bug actually is), falling
+    // back to the default branch for push-to-default failures. Base the fix
+    // branch off the exact failing commit so the patch applies on top of it.
+    const baseBranch = workflow_run?.head_branch || repository.default_branch || 'main';
     const fixBranch = `warpfix/${fingerprint.hash}-${Date.now()}`;
 
-    // Get base branch ref
-    const baseRef = await octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
-      owner,
-      repo,
-      ref: `heads/${baseBranch}`,
-    });
+    let startSha = workflow_run?.head_sha;
+    if (!startSha) {
+      const baseRef = await octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
+        owner,
+        repo,
+        ref: `heads/${baseBranch}`,
+      });
+      startSha = baseRef.data.object.sha;
+    }
 
-    // Create fix branch
+    // Create fix branch off the failing commit
     await octokit.request('POST /repos/{owner}/{repo}/git/refs', {
       owner,
       repo,
       ref: `refs/heads/${fixBranch}`,
-      sha: baseRef.data.object.sha,
+      sha: startSha,
     });
 
     // Parse diff and apply changes via API

@@ -7,7 +7,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/llms.txt", "/llms-full.txt", "/humans.txt"],
+        allow: ["/", "/tools/", "/llms.txt", "/llms-full.txt", "/humans.txt"],
         disallow: ["/api/", "/dashboard/", "/admin/", "/_next/", "/auth-error"],
       },
       // AI Search Engine Crawlers — explicitly allowed

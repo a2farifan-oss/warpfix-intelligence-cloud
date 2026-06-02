@@ -39,8 +39,20 @@ async function getInstallationOctokit(installationId) {
   }
 }
 
+// Return the raw installation access token (not an Octokit). Needed for git
+// operations like cloning a repo over HTTPS (x-access-token:<token>@github.com).
+async function getInstallationToken(installationId) {
+  const appJWT = createAppJWT();
+  const appOctokit = new Octokit({ auth: appJWT });
+  const { data } = await appOctokit.request(
+    'POST /app/installations/{installation_id}/access_tokens',
+    { installation_id: installationId }
+  );
+  return data.token;
+}
+
 async function getUserOctokit(accessToken) {
   return new Octokit({ auth: accessToken });
 }
 
-module.exports = { getInstallationOctokit, getUserOctokit, createAppJWT };
+module.exports = { getInstallationOctokit, getInstallationToken, getUserOctokit, createAppJWT };

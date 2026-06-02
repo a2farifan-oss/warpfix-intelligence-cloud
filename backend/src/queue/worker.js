@@ -108,6 +108,7 @@ async function processRepairJob(job) {
       patch,
       repository,
       installation_id,
+      workflow_run,
     });
 
     // Step 7: Compute confidence

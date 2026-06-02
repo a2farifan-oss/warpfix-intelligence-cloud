@@ -4,6 +4,7 @@ const { getFewShotBlock } = require('./retrieval');
 
 const PATCH_SAFETY_RULES = {
   maxDiffLines: 200,
+  maxFilesChanged: 8,
   // Genuinely dangerous content. These are intentionally narrow: reading config
   // via process.env, or having a variable/comment that merely contains the word
   // "secret"/"env", is normal in real source files and must NOT be blocked —
@@ -39,14 +40,18 @@ async function generatePatch({ logData, classification, repository, context, ins
 
   // Fetch source files from GitHub for accurate patching
   let sourceFiles = {};
+  const knownFiles = new Set();
   if (installation_id && repository) {
     const filesToFetch = [...(logData.affectedFiles || [])];
     // Also fetch all src/ files from the repo tree for full context
     const repoSrcFiles = await fetchRepoSourceTree(repository, installation_id, ref);
     for (const f of repoSrcFiles) {
+      knownFiles.add(f);
       if (!filesToFetch.includes(f)) filesToFetch.push(f);
     }
+    for (const f of (logData.affectedFiles || [])) knownFiles.add(f);
     sourceFiles = await fetchSourceFiles(filesToFetch.slice(0, 10), repository, installation_id, ref);
+    for (const f of Object.keys(sourceFiles)) knownFiles.add(f);
     logger.info('Fetched source files', { count: Object.keys(sourceFiles).length, files: Object.keys(sourceFiles), ref });
   }
 
@@ -99,8 +104,8 @@ Rules:
     patch = extractDiff(result);
   }
 
-  // Safety validation
-  const safetyCheck = validatePatchSafety(patch);
+  // Safety validation (incl. scope guards: no inventing files / gutting files)
+  const safetyCheck = validatePatchSafety(patch, { knownFiles: Array.from(knownFiles), sourceFiles });
   if (!safetyCheck.safe) {
     logger.warn('Patch failed safety check', { reasons: safetyCheck.reasons });
     // Non-retryable: regenerating won't make an unsafe patch safe, so the worker
@@ -286,21 +291,55 @@ function extractDiff(llmOutput) {
   return llmOutput.trim();
 }
 
-function validatePatchSafety(patch) {
+function validatePatchSafety(patch, options = {}) {
   const reasons = [];
+  // knownFiles = the source files that actually exist on the failing ref.
+  // sourceFiles = path -> original content (used to detect file-gutting).
+  const knownFiles = new Set(options.knownFiles || Object.keys(options.sourceFiles || {}));
+  const sourceFiles = options.sourceFiles || {};
 
   // For JSON format, extract content for safety checks
   let patchToCheck = patch;
   let filePaths = [];
+  let blocks = [];
   try {
     const parsed = JSON.parse(patch);
     if (parsed._warpfix_format === 'file_blocks' && Array.isArray(parsed.files)) {
+      blocks = parsed.files;
       filePaths = parsed.files.map(f => f.path);
       // Check file content for forbidden patterns too, not just paths
       patchToCheck = parsed.files.map(f => `${f.path}\n${f.content || ''}`).join('\n');
     }
   } catch {
     // Not JSON — check as diff
+  }
+
+  // SCOPE GUARDS (audit P1): stop hallucinated rewrites.
+  // 1) Touching too many files at once is a smell — a focused repair edits a few.
+  if (blocks.length > PATCH_SAFETY_RULES.maxFilesChanged) {
+    reasons.push(`Patch touches too many files: ${blocks.length} (max ${PATCH_SAFETY_RULES.maxFilesChanged})`);
+  }
+  for (const f of blocks) {
+    const p = (f.path || '').trim();
+    if (!p) continue;
+    const original = sourceFiles[p];
+    // 2) Inventing brand-new files. WarpFix once created a 168-line component
+    //    from a generic "exit code 1". Only allow new files when we have no
+    //    knowledge of the repo tree (knownFiles empty) — otherwise require the
+    //    target to be an existing file.
+    if (knownFiles.size > 0 && original === undefined && !knownFiles.has(p)) {
+      reasons.push(`Refusing to create a brand-new file not referenced by the failure: ${p}`);
+      continue;
+    }
+    // 3) Gutting an existing file (mass deletion). Reject if the rewrite drops
+    //    more than half of a non-trivial file.
+    if (typeof original === 'string' && original.trim()) {
+      const origLines = original.split('\n').length;
+      const newLines = (f.content || '').split('\n').length;
+      if (origLines >= 40 && newLines < origLines * 0.5 && (origLines - newLines) > 40) {
+        reasons.push(`Over-aggressive rewrite of ${p}: ${origLines}→${newLines} lines (removes ${origLines - newLines})`);
+      }
+    }
   }
 
   const lines = patchToCheck.split('\n');

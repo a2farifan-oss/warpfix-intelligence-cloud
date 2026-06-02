@@ -156,6 +156,20 @@ router.post('/github', verifyGitHubSignature, async (req, res) => {
         const repo = payload.repository;
         const installId = payload.installation?.id;
 
+        // Record acceptance (merge) vs rejection (closed unmerged) so the
+        // dashboard can report the HONEST metric — real customer acceptance —
+        // instead of the internal sandbox pass rate.
+        if (payload.action === 'closed' && pr.head?.ref?.startsWith('warpfix/')) {
+          try {
+            await query(
+              `UPDATE repairs SET pr_state = $1, accepted = $2, updated_at = NOW() WHERE pr_number = $3`,
+              [pr.merged ? 'merged' : 'closed', !!pr.merged, pr.number]
+            );
+          } catch (e) {
+            logger.debug('Failed to record PR acceptance', { error: e.message });
+          }
+        }
+
         // Capture org preferences when a WarpFix PR is closed/merged with edits
         if (payload.action === 'closed' && pr.merged && pr.head?.ref?.startsWith('warpfix/')) {
           logger.info('WarpFix PR merged — checking for org preference signals', {

@@ -22,32 +22,60 @@ async function getUserRepoIds(userId) {
 // Public stats endpoint — shows all repairs (including webhook-triggered ones without user_id)
 router.get('/public-stats', async (req, res) => {
   try {
-    const [repairsResult, successResult, fingerprintResult, recentResult] = await Promise.all([
+    const [repairsResult, successResult, fingerprintResult, recentResult, prResult] = await Promise.all([
       query(`SELECT COUNT(*) as total FROM repairs`),
-      query(`SELECT COUNT(*) as total FROM repairs WHERE sandbox_passed = TRUE`),
+      query(
+        `SELECT
+           COUNT(*) FILTER (WHERE sandbox_passed = TRUE) AS passed,
+           COUNT(*) FILTER (WHERE sandbox_passed = TRUE AND sandbox_verified = TRUE) AS verified
+         FROM repairs`
+      ),
       query(
         `SELECT COUNT(DISTINCT fingerprint_id) as unique_fingerprints,
                 COALESCE(SUM(CASE WHEN fingerprint_id IS NOT NULL THEN 1 ELSE 0 END), 0) as reused
          FROM repairs`
       ),
       query(
-        `SELECT r.id, r.status, r.confidence_score, r.sandbox_passed, r.pr_url, r.pr_number,
+        `SELECT r.id, r.status, r.confidence_score, r.sandbox_passed, r.sandbox_verified,
+                r.pr_url, r.pr_number, r.pr_state, r.accepted,
                 r.engine_used, r.patch_summary, r.created_at, repo.full_name as repo_name
          FROM repairs r
          LEFT JOIN repositories repo ON repo.id = r.repository_id
          ORDER BY r.created_at DESC LIMIT 20`
       ),
+      query(
+        `SELECT
+           COUNT(*) FILTER (WHERE pr_number IS NOT NULL) AS opened,
+           COUNT(*) FILTER (WHERE accepted = TRUE) AS merged,
+           COUNT(*) FILTER (WHERE pr_state = 'closed') AS rejected
+         FROM repairs`
+      ),
     ]);
 
     const totalRepairs = parseInt(repairsResult.rows[0].total);
-    const successfulRepairs = parseInt(successResult.rows[0].total);
-    const successRate = totalRepairs > 0 ? Math.round((successfulRepairs / totalRepairs) * 100) : 0;
+    const passedRepairs = parseInt(successResult.rows[0].passed);
+    const verifiedRepairs = parseInt(successResult.rows[0].verified);
+    const prsOpened = parseInt(prResult.rows[0].opened);
+    const prsMerged = parseInt(prResult.rows[0].merged);
+    const prsRejected = parseInt(prResult.rows[0].rejected);
+    // Honest headline: % of opened PRs the customer actually merged. Falls back
+    // to the verified-sandbox rate only when no PRs have a recorded outcome yet.
+    const decidedPRs = prsMerged + prsRejected;
+    const acceptanceRate = decidedPRs > 0 ? Math.round((prsMerged / decidedPRs) * 100) : null;
+    const verifiedRate = totalRepairs > 0 ? Math.round((verifiedRepairs / totalRepairs) * 100) : 0;
 
     res.json({
       stats: {
         total_repairs: totalRepairs,
-        successful_repairs: successfulRepairs,
-        success_rate: successRate,
+        // sandbox_passed kept for backwards-compat, but verified is the trustworthy one.
+        successful_repairs: passedRepairs,
+        verified_repairs: verifiedRepairs,
+        verified_rate: verifiedRate,
+        success_rate: verifiedRate, // headline now reflects REAL test-verified passes
+        prs_opened: prsOpened,
+        prs_merged: prsMerged,
+        prs_rejected: prsRejected,
+        acceptance_rate: acceptanceRate, // % of decided PRs merged by customers
         unique_fingerprints: parseInt(fingerprintResult.rows[0].unique_fingerprints),
         fingerprint_reuse_count: parseInt(fingerprintResult.rows[0].reused),
         repairs_this_month: totalRepairs,

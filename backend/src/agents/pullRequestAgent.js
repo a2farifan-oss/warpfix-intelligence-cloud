@@ -100,13 +100,17 @@ async function createPullRequest({ patch, repository, installation_id, classific
       base: baseBranch,
     });
 
-    // Add labels
+    // Add labels. When the sandbox could not run the REAL test suite
+    // (verified:false — non-Node stack or toolchain unavailable), flag the PR
+    // "unverified" so reviewers know the fix was not proven by tests.
     try {
+      const labels = ['warpfix', `confidence-${confidence.recommendation}`];
+      labels.push(confidence.verified ? 'verified' : 'unverified-needs-review');
       await octokit.request('POST /repos/{owner}/{repo}/issues/{issue_number}/labels', {
         owner,
         repo,
         issue_number: pr.data.number,
-        labels: ['warpfix', `confidence-${confidence.recommendation}`],
+        labels,
       });
     } catch {
       // Labels might not exist

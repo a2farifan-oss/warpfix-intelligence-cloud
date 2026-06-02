@@ -11,6 +11,9 @@ const { generateFingerprint } = require('../agents/fingerprint');
 const { lookupFingerprint, storeFingerprint } = require('../agents/fingerprintStore');
 const { generatePatch } = require('../agents/patchGenerator');
 const { isUnparseable, isPlaceholderPatch, patchAppliesToRepo } = require('../agents/patchGuards');
+const { classifyActionability } = require('../agents/actionability');
+const { inspectExistingWarpfixPRs, dedupDecision } = require('../agents/prDedup');
+const { postInfraDiagnostic } = require('../agents/diagnostics');
 const { validateInSandbox } = require('../agents/sandboxValidator');
 const { computeConfidence } = require('../agents/confidenceEngine');
 const { createPullRequest } = require('../agents/pullRequestAgent');
@@ -55,6 +58,51 @@ async function processRepairJob(job) {
     // Step 3: Generate fingerprint
     job.updateProgress(30);
     const fingerprint = generateFingerprint(logData, classification);
+
+    // Guard: only attempt a SOURCE-CODE repair on a genuine code bug. Infra/
+    // config failures (missing env vars, submodule URLs, network, dependency
+    // resolution) and pure noise (deprecation warnings, curl flags, JSON blobs)
+    // are not fixable by a patch — opening one is the spam/wrong-PR behaviour
+    // the audit flagged. For infra failures we post a single diagnostic comment
+    // instead; for noise we skip silently.
+    const actionability = classifyActionability(logData);
+    if (!actionability.actionable) {
+      logger.warn('Skipping repair: failure is not a code bug', {
+        jobId, repo: repository?.full_name, klass: actionability.klass, reason: actionability.reason,
+      });
+      if (actionability.klass === 'infra' && installation_id && repository && workflow_run?.head_sha) {
+        try {
+          const octokit = await getInstallationOctokit(installation_id);
+          await postInfraDiagnostic(octokit, {
+            owner: repository.owner, repo: repository.name, sha: workflow_run.head_sha,
+            fingerprintHash: fingerprint.hash, reason: actionability.reason,
+            errorSummary: logData.rootCause || logData.errorMessage,
+          });
+        } catch (e) {
+          logger.debug('Infra diagnostic post failed', { error: e.message });
+        }
+      }
+      return { status: 'skipped', reason: `non_actionable_${actionability.klass}`, pr_url: null };
+    }
+
+    // Guard: STOP REPAIR LOOPS. If a WarpFix PR for this exact failure is already
+    // open (or was closed unmerged = rejected), do not open another. This is the
+    // single biggest real-world fix — repos were getting 8–21 duplicate PRs.
+    if (installation_id && repository) {
+      try {
+        const octokit = await getInstallationOctokit(installation_id);
+        const prStats = await inspectExistingWarpfixPRs(octokit, repository.owner, repository.name, fingerprint.hash);
+        const decision = dedupDecision(prStats);
+        if (decision.skip) {
+          logger.warn('Skipping repair: duplicate/rejected PR exists', {
+            jobId, repo: repository?.full_name, reason: decision.reason, detail: decision.detail,
+          });
+          return { status: 'skipped', reason: decision.reason, pr_url: prStats?.openUrls?.[0] || null };
+        }
+      } catch (e) {
+        logger.debug('Dedup check errored; proceeding', { error: e.message });
+      }
+    }
 
     // Step 4: Check fingerprint DB
     job.updateProgress(40);
@@ -115,6 +163,7 @@ async function processRepairJob(job) {
     job.updateProgress(80);
     const confidence = computeConfidence({
       sandboxPassed: sandboxResult.passed,
+      sandboxVerified: sandboxResult.verified,
       patchSize: patch.length,
       fingerprintReuse: reusedFingerprint,
       classification,
@@ -213,15 +262,17 @@ async function processRepairJob(job) {
       logger.debug('Monthly stats aggregation failed', { error: e.message });
     }
 
-    // Step 11: Store repair record
+    // Step 11: Store repair record. sandbox_verified records whether the pass
+    // came from a REAL test run (vs a lightweight structural check) so the
+    // dashboard can report honest numbers instead of conflating the two.
     const duration = Date.now() - startTime;
     await query(
       `INSERT INTO repairs (failure_id, repository_id, user_id, fingerprint_id,
-        patch_diff, patch_summary, confidence_score, sandbox_passed,
+        patch_diff, patch_summary, confidence_score, sandbox_passed, sandbox_verified,
         pr_number, pr_url, status, engine_used, duration_ms)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
       [failureId, repoId, user_id, fingerprintId, patch, classification.summary,
-       confidence.score, sandboxResult.passed, prNumber, prUrl,
+       confidence.score, sandboxResult.passed, !!sandboxResult.verified, prNumber, prUrl,
        sandboxResult.passed ? 'completed' : 'failed',
        classification.type, duration]
     );

@@ -78,6 +78,7 @@ async function processRepairJob(job) {
           repository,
           context,
           installation_id,
+          workflow_run,
         });
       } catch (genErr) {
         // A patch that fails the safety check (e.g. would touch .env / a test
@@ -166,6 +167,7 @@ async function processRepairJob(job) {
         classification,
         confidence,
         fingerprint,
+        workflow_run,
       });
       prUrl = prResult.url;
       prNumber = prResult.number;

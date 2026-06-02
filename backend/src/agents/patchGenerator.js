@@ -28,20 +28,25 @@ const PATCH_SAFETY_RULES = {
 const FORBIDDEN_PATH = /(^|\/)\.env(\.|$)|(^|\/)\.github\/workflows\//i;
 const TEST_PATH = /(^|\/)(tests?|__tests__|__mocks__|spec)\/|\.(test|spec)\.\w+$|(^|\/)test\.\w+$/i;
 
-async function generatePatch({ logData, classification, repository, context, installation_id }) {
-  logger.info('Generating patch', { type: classification.type, repo: repository?.full_name });
+async function generatePatch({ logData, classification, repository, context, installation_id, workflow_run }) {
+  // The bug lives on the branch/commit whose CI failed, NOT necessarily the
+  // default branch. Read (and later patch) the failing ref so the LLM sees the
+  // actual broken code instead of an already-correct default branch.
+  const ref = workflow_run?.head_sha || workflow_run?.head_branch
+    || repository?.default_branch || 'main';
+  logger.info('Generating patch', { type: classification.type, repo: repository?.full_name, ref });
 
   // Fetch source files from GitHub for accurate patching
   let sourceFiles = {};
   if (installation_id && repository) {
     const filesToFetch = [...(logData.affectedFiles || [])];
     // Also fetch all src/ files from the repo tree for full context
-    const repoSrcFiles = await fetchRepoSourceTree(repository, installation_id);
+    const repoSrcFiles = await fetchRepoSourceTree(repository, installation_id, ref);
     for (const f of repoSrcFiles) {
       if (!filesToFetch.includes(f)) filesToFetch.push(f);
     }
-    sourceFiles = await fetchSourceFiles(filesToFetch.slice(0, 10), repository, installation_id);
-    logger.info('Fetched source files', { count: Object.keys(sourceFiles).length, files: Object.keys(sourceFiles) });
+    sourceFiles = await fetchSourceFiles(filesToFetch.slice(0, 10), repository, installation_id, ref);
+    logger.info('Fetched source files', { count: Object.keys(sourceFiles).length, files: Object.keys(sourceFiles), ref });
   }
 
   const prompt = buildPatchPrompt(logData, classification, context, sourceFiles);
@@ -95,16 +100,16 @@ Rules:
   return patch;
 }
 
-async function fetchRepoSourceTree(repository, installationId) {
+async function fetchRepoSourceTree(repository, installationId, ref) {
   try {
     const { getInstallationOctokit } = require('../services/github');
     const octokit = await getInstallationOctokit(installationId);
-    const branch = repository.default_branch || 'main';
+    const treeish = ref || repository.default_branch || 'main';
     
     const tree = await octokit.request('GET /repos/{owner}/{repo}/git/trees/{tree_sha}', {
       owner: repository.owner,
       repo: repository.name,
-      tree_sha: branch,
+      tree_sha: treeish,
       recursive: '1',
     });
     
@@ -129,14 +134,14 @@ async function fetchRepoSourceTree(repository, installationId) {
   }
 }
 
-async function fetchSourceFiles(affectedFiles, repository, installationId) {
+async function fetchSourceFiles(affectedFiles, repository, installationId, ref) {
   const files = {};
   try {
     const { getInstallationOctokit } = require('../services/github');
     const octokit = await getInstallationOctokit(installationId);
     const owner = repository.owner;
     const repo = repository.name;
-    const branch = repository.default_branch || 'main';
+    const branch = ref || repository.default_branch || 'main';
 
     for (const filePath of affectedFiles.slice(0, 5)) {
       try {
@@ -199,16 +204,40 @@ function buildPatchPrompt(logData, classification, context, sourceFiles = {}) {
 
 function parseFileBlocks(llmOutput) {
   const files = [];
+  if (!llmOutput) return files;
+  // Some models wrap the whole answer in a markdown fence despite instructions.
+  // Strip a single outer ``` ... ``` wrapper so the FILE markers are reachable.
+  let text = llmOutput.trim();
+  const outerFence = text.match(/^```[\w-]*\n([\s\S]*?)\n```$/);
+  if (outerFence && /===FILE:/.test(outerFence[1])) text = outerFence[1];
+
   const regex = /===FILE:\s*(.+?)===\n([\s\S]*?)===END_FILE===/g;
   let match;
-  while ((match = regex.exec(llmOutput)) !== null) {
+  while ((match = regex.exec(text)) !== null) {
     const path = match[1].trim();
-    const content = match[2].trim();
+    const content = stripContentFence(match[2].trim());
     if (path && content) {
       files.push({ path, content });
     }
   }
+
+  // Tolerate a truncated final block (model hit max_tokens before ===END_FILE===):
+  // capture the last opened FILE block that was never closed.
+  if (files.length === 0) {
+    const open = text.match(/===FILE:\s*(.+?)===\n([\s\S]*)$/);
+    if (open && !/===END_FILE===/.test(open[2])) {
+      const path = open[1].trim();
+      const content = stripContentFence(open[2].trim());
+      if (path && content) files.push({ path, content });
+    }
+  }
   return files;
+}
+
+// Remove a leading/trailing ```lang ... ``` fence around file content if present.
+function stripContentFence(content) {
+  const m = content.match(/^```[\w-]*\n([\s\S]*?)\n?```$/);
+  return m ? m[1].trim() : content;
 }
 
 function extractDiff(llmOutput) {

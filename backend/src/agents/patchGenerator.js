@@ -1,5 +1,6 @@
 const { logger } = require('../utils/logger');
 const { callLLM } = require('../services/llm');
+const { getFewShotBlock } = require('./retrieval');
 
 const PATCH_SAFETY_RULES = {
   maxDiffLines: 200,
@@ -49,7 +50,17 @@ async function generatePatch({ logData, classification, repository, context, ins
     logger.info('Fetched source files', { count: Object.keys(sourceFiles).length, files: Object.keys(sourceFiles), ref });
   }
 
-  const prompt = buildPatchPrompt(logData, classification, context, sourceFiles);
+  let prompt = buildPatchPrompt(logData, classification, context, sourceFiles);
+
+  // Retrieval-augmented few-shot: prepend similar, previously-verified fixes so
+  // the model learns conventions it can't infer from the error alone. Gated and
+  // capped; on failure it returns '' and we proceed exactly as before.
+  const fewShot = getFewShotBlock({
+    errorMessage: logData.errorMessage,
+    description: classification.suggestedApproach || logData.rootCause || '',
+    category: classification.type,
+  });
+  if (fewShot) prompt = `${fewShot}\n${prompt}`;
 
   const result = await callLLM({
     system: `You are an expert CI repair agent. Analyze the error and fix the SOURCE code (not the tests).

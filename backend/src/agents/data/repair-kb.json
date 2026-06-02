@@ -1,0 +1,1382 @@
+[
+  {
+    "id": "array_mutation_44021",
+    "category": "array_mutation",
+    "description": "sort() mutates the caller's array (shared-state side effect)",
+    "errorMessage": "Detected 2 distinct failures — fix ALL of them:\n\nFAIL: does not mutate the input: Expected values to be strictly deep-equal:\n+ actual - expected\n  [\n+   86,\n    79,\n    72,\n\n--- next failure ---\n\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function sortedDesc_e21d(arr) {\n  return [...arr].sort((a, b) => b - a);\n}\nmodule.exports = { sortedDesc_e21d };\n"
+    }
+  },
+  {
+    "id": "array_mutation_162806",
+    "category": "array_mutation",
+    "description": "sort() mutates the caller's array (shared-state side effect)",
+    "errorMessage": "Detected 2 distinct failures — fix ALL of them:\n\nFAIL: does not mutate the input: Expected values to be strictly deep-equal:\n+ actual - expected\n  [\n+   74,\n+   74,\n    40,\n\n--- next failure ---\n\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function sortedDesc_2kmp(arr) {\n  return [...arr].sort((a, b) => b - a);\n}\nmodule.exports = { sortedDesc_2kmp };\n"
+    }
+  },
+  {
+    "id": "array_mutation_281591",
+    "category": "array_mutation",
+    "description": "sort() mutates the caller's array (shared-state side effect)",
+    "errorMessage": "Detected 2 distinct failures — fix ALL of them:\n\nFAIL: does not mutate the input: Expected values to be strictly deep-equal:\n+ actual - expected\n  [\n+   87,\n+   51,\n    21,\n\n--- next failure ---\n\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function sortedDesc_b5xi(arr) {\n  return [...arr].sort((a, b) => b - a);\n}\nmodule.exports = { sortedDesc_b5xi };\n"
+    }
+  },
+  {
+    "id": "array_mutation_400376",
+    "category": "array_mutation",
+    "description": "sort() mutates the caller's array (shared-state side effect)",
+    "errorMessage": "Detected 2 distinct failures — fix ALL of them:\n\nFAIL: does not mutate the input: Expected values to be strictly deep-equal:\n+ actual - expected\n  [\n+   89,\n    54,\n    47,\n\n--- next failure ---\n\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function sortedDesc_klrb(arr) {\n  return [...arr].sort((a, b) => b - a);\n}\nmodule.exports = { sortedDesc_klrb };\n"
+    }
+  },
+  {
+    "id": "array_mutation_519161",
+    "category": "array_mutation",
+    "description": "sort() mutates the caller's array (shared-state side effect)",
+    "errorMessage": "Detected 2 distinct failures — fix ALL of them:\n\nFAIL: does not mutate the input: Expected values to be strictly deep-equal:\n+ actual - expected\n  [\n+   74,\n-   12,\n    45,\n\n--- next failure ---\n\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function sortedDesc_2cqz(arr) {\n  return [...arr].sort((a, b) => b - a);\n}\nmodule.exports = { sortedDesc_2cqz };\n"
+    }
+  },
+  {
+    "id": "array_mutation_637946",
+    "category": "array_mutation",
+    "description": "sort() mutates the caller's array (shared-state side effect)",
+    "errorMessage": "Detected 2 distinct failures — fix ALL of them:\n\nFAIL: does not mutate the input: Expected values to be strictly deep-equal:\n+ actual - expected\n  [\n+   96,\n-   11,\n    77,\n\n--- next failure ---\n\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function sortedDesc_bpdb(arr) {\n  return [...arr].sort((a, b) => b - a);\n}\nmodule.exports = { sortedDesc_bpdb };\n"
+    }
+  },
+  {
+    "id": "array_mutation_756731",
+    "category": "array_mutation",
+    "description": "sort() mutates the caller's array (shared-state side effect)",
+    "errorMessage": "Detected 2 distinct failures — fix ALL of them:\n\nFAIL: does not mutate the input: Expected values to be strictly deep-equal:\n+ actual - expected\n  [\n+   96,\n-   8,\n    87,\n\n--- next failure ---\n\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function sortedDesc_cn4p(arr) {\n  return [...arr].sort((a, b) => b - a);\n}\nmodule.exports = { sortedDesc_cn4p };\n"
+    }
+  },
+  {
+    "id": "array_mutation_875516",
+    "category": "array_mutation",
+    "description": "sort() mutates the caller's array (shared-state side effect)",
+    "errorMessage": "Detected 2 distinct failures — fix ALL of them:\n\nFAIL: does not mutate the input: Expected values to be strictly deep-equal:\n+ actual - expected\n  [\n    84,\n    78,\n+   52,\n\n--- next failure ---\n\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function sortedDesc_9t1s(arr) {\n  return [...arr].sort((a, b) => b - a);\n}\nmodule.exports = { sortedDesc_9t1s };\n"
+    }
+  },
+  {
+    "id": "array_mutation_994301",
+    "category": "array_mutation",
+    "description": "sort() mutates the caller's array (shared-state side effect)",
+    "errorMessage": "Detected 2 distinct failures — fix ALL of them:\n\nFAIL: does not mutate the input: Expected values to be strictly deep-equal:\n+ actual - expected\n  [\n+   81,\n+   77,\n    44,\n\n--- next failure ---\n\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function sortedDesc_7r6(arr) {\n  return [...arr].sort((a, b) => b - a);\n}\nmodule.exports = { sortedDesc_7r6 };\n"
+    }
+  },
+  {
+    "id": "array_mutation_1113086",
+    "category": "array_mutation",
+    "description": "sort() mutates the caller's array (shared-state side effect)",
+    "errorMessage": "Detected 2 distinct failures — fix ALL of them:\n\nFAIL: does not mutate the input: Expected values to be strictly deep-equal:\n+ actual - expected\n  [\n-   46,\n-   60,\n    85,\n\n--- next failure ---\n\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function sortedDesc_cyft(arr) {\n  return [...arr].sort((a, b) => b - a);\n}\nmodule.exports = { sortedDesc_cyft };\n"
+    }
+  },
+  {
+    "id": "async_missing_await_20264",
+    "category": "async_missing_await",
+    "description": "Missing await makes the function multiply a Promise (NaN)",
+    "errorMessage": "FAIL: compute_51kj awaits the promise: Expected values to be strictly equal:\nNaN !== 120\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "async function load_ba3n() { return 20; }\nasync function compute_51kj() {\n  const v = await load_ba3n();\n  return v * 6;\n}\nmodule.exports = { load_ba3n, compute_51kj };\n"
+    }
+  },
+  {
+    "id": "async_missing_await_139049",
+    "category": "async_missing_await",
+    "description": "Missing await makes the function multiply a Promise (NaN)",
+    "errorMessage": "FAIL: compute_4qd5 awaits the promise: Expected values to be strictly equal:\nNaN !== 45\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "async function load_lbrp() { return 15; }\nasync function compute_4qd5() {\n  const v = await load_lbrp();\n  return v * 3;\n}\nmodule.exports = { load_lbrp, compute_4qd5 };\n"
+    }
+  },
+  {
+    "id": "async_missing_await_257834",
+    "category": "async_missing_await",
+    "description": "Missing await makes the function multiply a Promise (NaN)",
+    "errorMessage": "FAIL: compute_hmwo awaits the promise: Expected values to be strictly equal:\nNaN !== 24\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "async function load_8ass() { return 8; }\nasync function compute_hmwo() {\n  const v = await load_8ass();\n  return v * 3;\n}\nmodule.exports = { load_8ass, compute_hmwo };\n"
+    }
+  },
+  {
+    "id": "async_missing_await_376619",
+    "category": "async_missing_await",
+    "description": "Missing await makes the function multiply a Promise (NaN)",
+    "errorMessage": "FAIL: compute_9m7 awaits the promise: Expected values to be strictly equal:\nNaN !== 72\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "async function load_9k8e() { return 18; }\nasync function compute_9m7() {\n  const v = await load_9k8e();\n  return v * 4;\n}\nmodule.exports = { load_9k8e, compute_9m7 };\n"
+    }
+  },
+  {
+    "id": "async_missing_await_495404",
+    "category": "async_missing_await",
+    "description": "Missing await makes the function multiply a Promise (NaN)",
+    "errorMessage": "FAIL: compute_770s awaits the promise: Expected values to be strictly equal:\nNaN !== 60\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "async function load_ezl0() { return 12; }\nasync function compute_770s() {\n  const v = await load_ezl0();\n  return v * 5;\n}\nmodule.exports = { load_ezl0, compute_770s };\n"
+    }
+  },
+  {
+    "id": "async_missing_await_614189",
+    "category": "async_missing_await",
+    "description": "Missing await makes the function multiply a Promise (NaN)",
+    "errorMessage": "FAIL: compute_iyrq awaits the promise: Expected values to be strictly equal:\nNaN !== 20\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "async function load_gspn() { return 10; }\nasync function compute_iyrq() {\n  const v = await load_gspn();\n  return v * 2;\n}\nmodule.exports = { load_gspn, compute_iyrq };\n"
+    }
+  },
+  {
+    "id": "async_missing_await_732974",
+    "category": "async_missing_await",
+    "description": "Missing await makes the function multiply a Promise (NaN)",
+    "errorMessage": "FAIL: compute_a0f7 awaits the promise: Expected values to be strictly equal:\nNaN !== 108\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "async function load_ivud() { return 18; }\nasync function compute_a0f7() {\n  const v = await load_ivud();\n  return v * 6;\n}\nmodule.exports = { load_ivud, compute_a0f7 };\n"
+    }
+  },
+  {
+    "id": "async_missing_await_851759",
+    "category": "async_missing_await",
+    "description": "Missing await makes the function multiply a Promise (NaN)",
+    "errorMessage": "FAIL: compute_en9i awaits the promise: Expected values to be strictly equal:\nNaN !== 80\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "async function load_msh() { return 16; }\nasync function compute_en9i() {\n  const v = await load_msh();\n  return v * 5;\n}\nmodule.exports = { load_msh, compute_en9i };\n"
+    }
+  },
+  {
+    "id": "async_missing_await_970544",
+    "category": "async_missing_await",
+    "description": "Missing await makes the function multiply a Promise (NaN)",
+    "errorMessage": "FAIL: compute_f60f awaits the promise: Expected values to be strictly equal:\nNaN !== 25\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "async function load_lbgo() { return 5; }\nasync function compute_f60f() {\n  const v = await load_lbgo();\n  return v * 5;\n}\nmodule.exports = { load_lbgo, compute_f60f };\n"
+    }
+  },
+  {
+    "id": "async_missing_await_1089329",
+    "category": "async_missing_await",
+    "description": "Missing await makes the function multiply a Promise (NaN)",
+    "errorMessage": "FAIL: compute_73b0 awaits the promise: Expected values to be strictly equal:\nNaN !== 42\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "async function load_7df4() { return 14; }\nasync function compute_73b0() {\n  const v = await load_7df4();\n  return v * 3;\n}\nmodule.exports = { load_7df4, compute_73b0 };\n"
+    }
+  },
+  {
+    "id": "closure_scope_91535",
+    "category": "closure_scope",
+    "description": "var in loop shares one binding so all closures return the final value",
+    "errorMessage": "FAIL: each closure captures its own index: Expected values to be strictly equal:\n3 !== 0\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function makeGetters_ig94() {\n  const fns = [];\n  for (let i = 0; i < 3; i++) {\n    fns.push(() => i);\n  }\n  return fns;\n}\nmodule.exports = { makeGetters_ig94 };\n"
+    }
+  },
+  {
+    "id": "closure_scope_210320",
+    "category": "closure_scope",
+    "description": "var in loop shares one binding so all closures return the final value",
+    "errorMessage": "FAIL: each closure captures its own index: Expected values to be strictly equal:\n3 !== 0\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function makeGetters_la6w() {\n  const fns = [];\n  for (let i = 0; i < 3; i++) {\n    fns.push(() => i);\n  }\n  return fns;\n}\nmodule.exports = { makeGetters_la6w };\n"
+    }
+  },
+  {
+    "id": "closure_scope_329105",
+    "category": "closure_scope",
+    "description": "var in loop shares one binding so all closures return the final value",
+    "errorMessage": "FAIL: each closure captures its own index: Expected values to be strictly equal:\n3 !== 0\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function makeGetters_eh83() {\n  const fns = [];\n  for (let i = 0; i < 3; i++) {\n    fns.push(() => i);\n  }\n  return fns;\n}\nmodule.exports = { makeGetters_eh83 };\n"
+    }
+  },
+  {
+    "id": "closure_scope_447890",
+    "category": "closure_scope",
+    "description": "var in loop shares one binding so all closures return the final value",
+    "errorMessage": "FAIL: each closure captures its own index: Expected values to be strictly equal:\n3 !== 0\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function makeGetters_a4fl() {\n  const fns = [];\n  for (let i = 0; i < 3; i++) {\n    fns.push(() => i);\n  }\n  return fns;\n}\nmodule.exports = { makeGetters_a4fl };\n"
+    }
+  },
+  {
+    "id": "closure_scope_566675",
+    "category": "closure_scope",
+    "description": "var in loop shares one binding so all closures return the final value",
+    "errorMessage": "FAIL: each closure captures its own index: Expected values to be strictly equal:\n3 !== 0\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function makeGetters_dkf5() {\n  const fns = [];\n  for (let i = 0; i < 3; i++) {\n    fns.push(() => i);\n  }\n  return fns;\n}\nmodule.exports = { makeGetters_dkf5 };\n"
+    }
+  },
+  {
+    "id": "closure_scope_685460",
+    "category": "closure_scope",
+    "description": "var in loop shares one binding so all closures return the final value",
+    "errorMessage": "FAIL: each closure captures its own index: Expected values to be strictly equal:\n4 !== 0\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function makeGetters_3efk() {\n  const fns = [];\n  for (let i = 0; i < 4; i++) {\n    fns.push(() => i);\n  }\n  return fns;\n}\nmodule.exports = { makeGetters_3efk };\n"
+    }
+  },
+  {
+    "id": "closure_scope_804245",
+    "category": "closure_scope",
+    "description": "var in loop shares one binding so all closures return the final value",
+    "errorMessage": "FAIL: each closure captures its own index: Expected values to be strictly equal:\n3 !== 0\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function makeGetters_6aro() {\n  const fns = [];\n  for (let i = 0; i < 3; i++) {\n    fns.push(() => i);\n  }\n  return fns;\n}\nmodule.exports = { makeGetters_6aro };\n"
+    }
+  },
+  {
+    "id": "closure_scope_923030",
+    "category": "closure_scope",
+    "description": "var in loop shares one binding so all closures return the final value",
+    "errorMessage": "FAIL: each closure captures its own index: Expected values to be strictly equal:\n3 !== 0\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function makeGetters_iyrc() {\n  const fns = [];\n  for (let i = 0; i < 3; i++) {\n    fns.push(() => i);\n  }\n  return fns;\n}\nmodule.exports = { makeGetters_iyrc };\n"
+    }
+  },
+  {
+    "id": "closure_scope_1041815",
+    "category": "closure_scope",
+    "description": "var in loop shares one binding so all closures return the final value",
+    "errorMessage": "FAIL: each closure captures its own index: Expected values to be strictly equal:\n3 !== 0\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function makeGetters_jiq9() {\n  const fns = [];\n  for (let i = 0; i < 3; i++) {\n    fns.push(() => i);\n  }\n  return fns;\n}\nmodule.exports = { makeGetters_jiq9 };\n"
+    }
+  },
+  {
+    "id": "closure_scope_1160600",
+    "category": "closure_scope",
+    "description": "var in loop shares one binding so all closures return the final value",
+    "errorMessage": "FAIL: each closure captures its own index: Expected values to be strictly equal:\n3 !== 0\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function makeGetters_15fg() {\n  const fns = [];\n  for (let i = 0; i < 3; i++) {\n    fns.push(() => i);\n  }\n  return fns;\n}\nmodule.exports = { makeGetters_15fg };\n"
+    }
+  },
+  {
+    "id": "comparison_operator_99454",
+    "category": "comparison_operator",
+    "description": "Strict > excludes the inclusive boundary; should be >=",
+    "errorMessage": "FAIL: boundary age 16 is inclusive: Expected values to be strictly equal:\nfalse !== true\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function isAdult_44ko(age) {\n  return age >= 16;\n}\nmodule.exports = { isAdult_44ko };\n"
+    }
+  },
+  {
+    "id": "comparison_operator_218239",
+    "category": "comparison_operator",
+    "description": "Strict > excludes the inclusive boundary; should be >=",
+    "errorMessage": "FAIL: boundary age 16 is inclusive: Expected values to be strictly equal:\nfalse !== true\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function isAdult_m3ih(age) {\n  return age >= 16;\n}\nmodule.exports = { isAdult_m3ih };\n"
+    }
+  },
+  {
+    "id": "comparison_operator_337024",
+    "category": "comparison_operator",
+    "description": "Strict > excludes the inclusive boundary; should be >=",
+    "errorMessage": "FAIL: boundary age 18 is inclusive: Expected values to be strictly equal:\nfalse !== true\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function isAdult_dn4w(age) {\n  return age >= 18;\n}\nmodule.exports = { isAdult_dn4w };\n"
+    }
+  },
+  {
+    "id": "comparison_operator_455809",
+    "category": "comparison_operator",
+    "description": "Strict > excludes the inclusive boundary; should be >=",
+    "errorMessage": "FAIL: boundary age 18 is inclusive: Expected values to be strictly equal:\nfalse !== true\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function isAdult_bvw3(age) {\n  return age >= 18;\n}\nmodule.exports = { isAdult_bvw3 };\n"
+    }
+  },
+  {
+    "id": "comparison_operator_574594",
+    "category": "comparison_operator",
+    "description": "Strict > excludes the inclusive boundary; should be >=",
+    "errorMessage": "FAIL: boundary age 18 is inclusive: Expected values to be strictly equal:\nfalse !== true\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function isAdult_22nq(age) {\n  return age >= 18;\n}\nmodule.exports = { isAdult_22nq };\n"
+    }
+  },
+  {
+    "id": "comparison_operator_693379",
+    "category": "comparison_operator",
+    "description": "Strict > excludes the inclusive boundary; should be >=",
+    "errorMessage": "FAIL: boundary age 16 is inclusive: Expected values to be strictly equal:\nfalse !== true\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function isAdult_812z(age) {\n  return age >= 16;\n}\nmodule.exports = { isAdult_812z };\n"
+    }
+  },
+  {
+    "id": "comparison_operator_812164",
+    "category": "comparison_operator",
+    "description": "Strict > excludes the inclusive boundary; should be >=",
+    "errorMessage": "FAIL: boundary age 18 is inclusive: Expected values to be strictly equal:\nfalse !== true\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function isAdult_ftwa(age) {\n  return age >= 18;\n}\nmodule.exports = { isAdult_ftwa };\n"
+    }
+  },
+  {
+    "id": "comparison_operator_930949",
+    "category": "comparison_operator",
+    "description": "Strict > excludes the inclusive boundary; should be >=",
+    "errorMessage": "FAIL: boundary age 16 is inclusive: Expected values to be strictly equal:\nfalse !== true\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function isAdult_lba6(age) {\n  return age >= 16;\n}\nmodule.exports = { isAdult_lba6 };\n"
+    }
+  },
+  {
+    "id": "comparison_operator_1049734",
+    "category": "comparison_operator",
+    "description": "Strict > excludes the inclusive boundary; should be >=",
+    "errorMessage": "FAIL: boundary age 16 is inclusive: Expected values to be strictly equal:\nfalse !== true\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function isAdult_3km3(age) {\n  return age >= 16;\n}\nmodule.exports = { isAdult_3km3 };\n"
+    }
+  },
+  {
+    "id": "comparison_operator_1168519",
+    "category": "comparison_operator",
+    "description": "Strict > excludes the inclusive boundary; should be >=",
+    "errorMessage": "FAIL: boundary age 18 is inclusive: Expected values to be strictly equal:\nfalse !== true\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function isAdult_hkc2(age) {\n  return age >= 18;\n}\nmodule.exports = { isAdult_hkc2 };\n"
+    }
+  },
+  {
+    "id": "date_arithmetic_67778",
+    "category": "date_arithmetic",
+    "description": "Day offset computed in seconds, not milliseconds",
+    "errorMessage": "FAIL: adds N days in milliseconds: Expected values to be strictly equal:\n+ actual - expected\n+ 86400\n- 86400000\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function addDays_96kq(ms, n) {\n  return ms + n * 86400 * 1000;\n}\nmodule.exports = { addDays_96kq };\n"
+    }
+  },
+  {
+    "id": "date_arithmetic_186563",
+    "category": "date_arithmetic",
+    "description": "Day offset computed in seconds, not milliseconds",
+    "errorMessage": "FAIL: adds N days in milliseconds: Expected values to be strictly equal:\n+ actual - expected\n+ 777600\n- 777600000\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function addDays_72pj(ms, n) {\n  return ms + n * 86400 * 1000;\n}\nmodule.exports = { addDays_72pj };\n"
+    }
+  },
+  {
+    "id": "date_arithmetic_305348",
+    "category": "date_arithmetic",
+    "description": "Day offset computed in seconds, not milliseconds",
+    "errorMessage": "FAIL: adds N days in milliseconds: Expected values to be strictly equal:\n+ actual - expected\n+ 172800\n- 172800000\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function addDays_lpy3(ms, n) {\n  return ms + n * 86400 * 1000;\n}\nmodule.exports = { addDays_lpy3 };\n"
+    }
+  },
+  {
+    "id": "date_arithmetic_424133",
+    "category": "date_arithmetic",
+    "description": "Day offset computed in seconds, not milliseconds",
+    "errorMessage": "FAIL: adds N days in milliseconds: Expected values to be strictly equal:\n+ actual - expected\n+ 777600\n- 777600000\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function addDays_b849(ms, n) {\n  return ms + n * 86400 * 1000;\n}\nmodule.exports = { addDays_b849 };\n"
+    }
+  },
+  {
+    "id": "date_arithmetic_542918",
+    "category": "date_arithmetic",
+    "description": "Day offset computed in seconds, not milliseconds",
+    "errorMessage": "FAIL: adds N days in milliseconds: Expected values to be strictly equal:\n+ actual - expected\n+ 691200\n- 691200000\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function addDays_m69k(ms, n) {\n  return ms + n * 86400 * 1000;\n}\nmodule.exports = { addDays_m69k };\n"
+    }
+  },
+  {
+    "id": "date_arithmetic_661703",
+    "category": "date_arithmetic",
+    "description": "Day offset computed in seconds, not milliseconds",
+    "errorMessage": "FAIL: adds N days in milliseconds: Expected values to be strictly equal:\n+ actual - expected\n+ 691200\n- 691200000\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function addDays_gcnk(ms, n) {\n  return ms + n * 86400 * 1000;\n}\nmodule.exports = { addDays_gcnk };\n"
+    }
+  },
+  {
+    "id": "date_arithmetic_780488",
+    "category": "date_arithmetic",
+    "description": "Day offset computed in seconds, not milliseconds",
+    "errorMessage": "FAIL: adds N days in milliseconds: Expected values to be strictly equal:\n+ actual - expected\n+ 691200\n- 691200000\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function addDays_hwx7(ms, n) {\n  return ms + n * 86400 * 1000;\n}\nmodule.exports = { addDays_hwx7 };\n"
+    }
+  },
+  {
+    "id": "date_arithmetic_899273",
+    "category": "date_arithmetic",
+    "description": "Day offset computed in seconds, not milliseconds",
+    "errorMessage": "FAIL: adds N days in milliseconds: Expected values to be strictly equal:\n+ actual - expected\n+ 86400\n- 86400000\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function addDays_gnzu(ms, n) {\n  return ms + n * 86400 * 1000;\n}\nmodule.exports = { addDays_gnzu };\n"
+    }
+  },
+  {
+    "id": "date_arithmetic_1018058",
+    "category": "date_arithmetic",
+    "description": "Day offset computed in seconds, not milliseconds",
+    "errorMessage": "FAIL: adds N days in milliseconds: Expected values to be strictly equal:\n+ actual - expected\n+ 691200\n- 691200000\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function addDays_f9ac(ms, n) {\n  return ms + n * 86400 * 1000;\n}\nmodule.exports = { addDays_f9ac };\n"
+    }
+  },
+  {
+    "id": "date_arithmetic_1136843",
+    "category": "date_arithmetic",
+    "description": "Day offset computed in seconds, not milliseconds",
+    "errorMessage": "FAIL: adds N days in milliseconds: Expected values to be strictly equal:\n+ actual - expected\n+ 86400\n- 86400000\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function addDays_d9uz(ms, n) {\n  return ms + n * 86400 * 1000;\n}\nmodule.exports = { addDays_d9uz };\n"
+    }
+  },
+  {
+    "id": "error_handling_83616",
+    "category": "error_handling",
+    "description": "Function returns Infinity instead of throwing on invalid input",
+    "errorMessage": "FAIL: throws on divide by zero: Missing expected exception.\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function divide_93vx(a, b) {\n  if (b === 0) throw new Error('division by zero');\n  return a / b;\n}\nmodule.exports = { divide_93vx };\n"
+    }
+  },
+  {
+    "id": "error_handling_202401",
+    "category": "error_handling",
+    "description": "Function returns Infinity instead of throwing on invalid input",
+    "errorMessage": "FAIL: throws on divide by zero: Missing expected exception.\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function divide_c1a3(a, b) {\n  if (b === 0) throw new Error('division by zero');\n  return a / b;\n}\nmodule.exports = { divide_c1a3 };\n"
+    }
+  },
+  {
+    "id": "error_handling_321186",
+    "category": "error_handling",
+    "description": "Function returns Infinity instead of throwing on invalid input",
+    "errorMessage": "FAIL: throws on divide by zero: Missing expected exception.\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function divide_790c(a, b) {\n  if (b === 0) throw new Error('division by zero');\n  return a / b;\n}\nmodule.exports = { divide_790c };\n"
+    }
+  },
+  {
+    "id": "error_handling_439971",
+    "category": "error_handling",
+    "description": "Function returns Infinity instead of throwing on invalid input",
+    "errorMessage": "FAIL: throws on divide by zero: Missing expected exception.\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function divide_94hd(a, b) {\n  if (b === 0) throw new Error('division by zero');\n  return a / b;\n}\nmodule.exports = { divide_94hd };\n"
+    }
+  },
+  {
+    "id": "error_handling_558756",
+    "category": "error_handling",
+    "description": "Function returns Infinity instead of throwing on invalid input",
+    "errorMessage": "FAIL: throws on divide by zero: Missing expected exception.\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function divide_ly52(a, b) {\n  if (b === 0) throw new Error('division by zero');\n  return a / b;\n}\nmodule.exports = { divide_ly52 };\n"
+    }
+  },
+  {
+    "id": "error_handling_677541",
+    "category": "error_handling",
+    "description": "Function returns Infinity instead of throwing on invalid input",
+    "errorMessage": "FAIL: throws on divide by zero: Missing expected exception.\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function divide_gxal(a, b) {\n  if (b === 0) throw new Error('division by zero');\n  return a / b;\n}\nmodule.exports = { divide_gxal };\n"
+    }
+  },
+  {
+    "id": "error_handling_796326",
+    "category": "error_handling",
+    "description": "Function returns Infinity instead of throwing on invalid input",
+    "errorMessage": "FAIL: throws on divide by zero: Missing expected exception.\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function divide_5z1n(a, b) {\n  if (b === 0) throw new Error('division by zero');\n  return a / b;\n}\nmodule.exports = { divide_5z1n };\n"
+    }
+  },
+  {
+    "id": "error_handling_915111",
+    "category": "error_handling",
+    "description": "Function returns Infinity instead of throwing on invalid input",
+    "errorMessage": "FAIL: throws on divide by zero: Missing expected exception.\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function divide_m75i(a, b) {\n  if (b === 0) throw new Error('division by zero');\n  return a / b;\n}\nmodule.exports = { divide_m75i };\n"
+    }
+  },
+  {
+    "id": "error_handling_1033896",
+    "category": "error_handling",
+    "description": "Function returns Infinity instead of throwing on invalid input",
+    "errorMessage": "FAIL: throws on divide by zero: Missing expected exception.\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function divide_m9rn(a, b) {\n  if (b === 0) throw new Error('division by zero');\n  return a / b;\n}\nmodule.exports = { divide_m9rn };\n"
+    }
+  },
+  {
+    "id": "error_handling_1152681",
+    "category": "error_handling",
+    "description": "Function returns Infinity instead of throwing on invalid input",
+    "errorMessage": "FAIL: throws on divide by zero: Missing expected exception.\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function divide_jwj8(a, b) {\n  if (b === 0) throw new Error('division by zero');\n  return a / b;\n}\nmodule.exports = { divide_jwj8 };\n"
+    }
+  },
+  {
+    "id": "float_precision_51940",
+    "category": "float_precision",
+    "description": "Floating-point sum not rounded to cents (0.1+0.2 !== 0.3)",
+    "errorMessage": "Detected 2 distinct failures — fix ALL of them:\n\nFAIL: rounds to cents: Expected values to be strictly equal:\n+ actual - expected\n+ 1.2000000000000002\n- 1.2\n     ^\n1 check(s) failed\n\n--- next failure ---\n\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function addMoney_90ff(a, b) {\n  return Math.round((a + b) * 100) / 100;\n}\nmodule.exports = { addMoney_90ff };\n"
+    }
+  },
+  {
+    "id": "float_precision_170725",
+    "category": "float_precision",
+    "description": "Floating-point sum not rounded to cents (0.1+0.2 !== 0.3)",
+    "errorMessage": "FAIL: rounds to cents: Expected values to be strictly equal:\n+ actual - expected\n+ 0.7999999999999999\n- 0.8\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function addMoney_kc73(a, b) {\n  return Math.round((a + b) * 100) / 100;\n}\nmodule.exports = { addMoney_kc73 };\n"
+    }
+  },
+  {
+    "id": "float_precision_289510",
+    "category": "float_precision",
+    "description": "Floating-point sum not rounded to cents (0.1+0.2 !== 0.3)",
+    "errorMessage": "FAIL: rounds to cents: Expected values to be strictly equal:\n+ actual - expected\n+ 1.2999999999999998\n- 1.3\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function addMoney_al8z(a, b) {\n  return Math.round((a + b) * 100) / 100;\n}\nmodule.exports = { addMoney_al8z };\n"
+    }
+  },
+  {
+    "id": "float_precision_408295",
+    "category": "float_precision",
+    "description": "Floating-point sum not rounded to cents (0.1+0.2 !== 0.3)",
+    "errorMessage": "FAIL: rounds to cents: Expected values to be strictly equal:\n+ actual - expected\n+ 1.2999999999999998\n- 1.3\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function addMoney_dyi8(a, b) {\n  return Math.round((a + b) * 100) / 100;\n}\nmodule.exports = { addMoney_dyi8 };\n"
+    }
+  },
+  {
+    "id": "float_precision_527080",
+    "category": "float_precision",
+    "description": "Floating-point sum not rounded to cents (0.1+0.2 !== 0.3)",
+    "errorMessage": "FAIL: rounds to cents: Expected values to be strictly equal:\n+ actual - expected\n+ 0.8999999999999999\n- 0.9\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function addMoney_9s13(a, b) {\n  return Math.round((a + b) * 100) / 100;\n}\nmodule.exports = { addMoney_9s13 };\n"
+    }
+  },
+  {
+    "id": "float_precision_645865",
+    "category": "float_precision",
+    "description": "Floating-point sum not rounded to cents (0.1+0.2 !== 0.3)",
+    "errorMessage": "Detected 2 distinct failures — fix ALL of them:\n\nFAIL: rounds to cents: Expected values to be strictly equal:\n+ actual - expected\n+ 0.6000000000000001\n- 0.6\n     ^\n1 check(s) failed\n\n--- next failure ---\n\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function addMoney_1ilr(a, b) {\n  return Math.round((a + b) * 100) / 100;\n}\nmodule.exports = { addMoney_1ilr };\n"
+    }
+  },
+  {
+    "id": "float_precision_764650",
+    "category": "float_precision",
+    "description": "Floating-point sum not rounded to cents (0.1+0.2 !== 0.3)",
+    "errorMessage": "FAIL: rounds to cents: Expected values to be strictly equal:\n+ actual - expected\n+ 0.8999999999999999\n- 0.9\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function addMoney_5brp(a, b) {\n  return Math.round((a + b) * 100) / 100;\n}\nmodule.exports = { addMoney_5brp };\n"
+    }
+  },
+  {
+    "id": "float_precision_883435",
+    "category": "float_precision",
+    "description": "Floating-point sum not rounded to cents (0.1+0.2 !== 0.3)",
+    "errorMessage": "FAIL: rounds to cents: Expected values to be strictly equal:\n+ actual - expected\n+ 1.2999999999999998\n- 1.3\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function addMoney_4cqq(a, b) {\n  return Math.round((a + b) * 100) / 100;\n}\nmodule.exports = { addMoney_4cqq };\n"
+    }
+  },
+  {
+    "id": "float_precision_1002220",
+    "category": "float_precision",
+    "description": "Floating-point sum not rounded to cents (0.1+0.2 !== 0.3)",
+    "errorMessage": "FAIL: rounds to cents: Expected values to be strictly equal:\n+ actual - expected\n+ 0.7999999999999999\n- 0.8\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function addMoney_cld1(a, b) {\n  return Math.round((a + b) * 100) / 100;\n}\nmodule.exports = { addMoney_cld1 };\n"
+    }
+  },
+  {
+    "id": "float_precision_1121005",
+    "category": "float_precision",
+    "description": "Floating-point sum not rounded to cents (0.1+0.2 !== 0.3)",
+    "errorMessage": "Detected 2 distinct failures — fix ALL of them:\n\nFAIL: rounds to cents: Expected values to be strictly equal:\n+ actual - expected\n+ 1.7000000000000002\n- 1.7\n     ^\n1 check(s) failed\n\n--- next failure ---\n\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function addMoney_6mrk(a, b) {\n  return Math.round((a + b) * 100) / 100;\n}\nmodule.exports = { addMoney_6mrk };\n"
+    }
+  },
+  {
+    "id": "multi_file_multi_root_123211",
+    "category": "multi_file_multi_root",
+    "description": "Two independent bugs in two files; both must be fixed in one patch",
+    "errorMessage": "FAIL: add works: Expected values to be strictly equal:\n-1 !== 9\nFAIL: mul works: Expected values to be strictly equal:\n9 !== 20\n2 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "mathadd.js": "function add_aie9(a, b) {\n  return a + b;\n}\nmodule.exports = { add_aie9 };\n",
+      "mathmul.js": "function mul_5o6f(a, b) {\n  return a * b;\n}\nmodule.exports = { mul_5o6f };\n"
+    }
+  },
+  {
+    "id": "multi_file_multi_root_241996",
+    "category": "multi_file_multi_root",
+    "description": "Two independent bugs in two files; both must be fixed in one patch",
+    "errorMessage": "FAIL: add works: Expected values to be strictly equal:\n2 !== 16\nFAIL: mul works: Expected values to be strictly equal:\n16 !== 63\n2 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "mathadd.js": "function add_e5s9(a, b) {\n  return a + b;\n}\nmodule.exports = { add_e5s9 };\n",
+      "mathmul.js": "function mul_6xmz(a, b) {\n  return a * b;\n}\nmodule.exports = { mul_6xmz };\n"
+    }
+  },
+  {
+    "id": "multi_file_multi_root_360781",
+    "category": "multi_file_multi_root",
+    "description": "Two independent bugs in two files; both must be fixed in one patch",
+    "errorMessage": "FAIL: add works: Expected values to be strictly equal:\n3 !== 9\nFAIL: mul works: Expected values to be strictly equal:\n9 !== 18\n2 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "mathadd.js": "function add_h8se(a, b) {\n  return a + b;\n}\nmodule.exports = { add_h8se };\n",
+      "mathmul.js": "function mul_2ebx(a, b) {\n  return a * b;\n}\nmodule.exports = { mul_2ebx };\n"
+    }
+  },
+  {
+    "id": "multi_file_multi_root_479566",
+    "category": "multi_file_multi_root",
+    "description": "Two independent bugs in two files; both must be fixed in one patch",
+    "errorMessage": "FAIL: add works: Expected values to be strictly equal:\n-5 !== 17\nFAIL: mul works: Expected values to be strictly equal:\n17 !== 66\n2 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "mathadd.js": "function add_fn7g(a, b) {\n  return a + b;\n}\nmodule.exports = { add_fn7g };\n",
+      "mathmul.js": "function mul_8k1j(a, b) {\n  return a * b;\n}\nmodule.exports = { mul_8k1j };\n"
+    }
+  },
+  {
+    "id": "multi_file_multi_root_598351",
+    "category": "multi_file_multi_root",
+    "description": "Two independent bugs in two files; both must be fixed in one patch",
+    "errorMessage": "FAIL: add works: Expected values to be strictly equal:\n-3 !== 11\nFAIL: mul works: Expected values to be strictly equal:\n11 !== 28\n2 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "mathadd.js": "function add_lg70(a, b) {\n  return a + b;\n}\nmodule.exports = { add_lg70 };\n",
+      "mathmul.js": "function mul_97b0(a, b) {\n  return a * b;\n}\nmodule.exports = { mul_97b0 };\n"
+    }
+  },
+  {
+    "id": "multi_file_multi_root_717136",
+    "category": "multi_file_multi_root",
+    "description": "Two independent bugs in two files; both must be fixed in one patch",
+    "errorMessage": "FAIL: add works: Expected values to be strictly equal:\n-2 !== 10\nFAIL: mul works: Expected values to be strictly equal:\n10 !== 24\n2 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "mathadd.js": "function add_cpqz(a, b) {\n  return a + b;\n}\nmodule.exports = { add_cpqz };\n",
+      "mathmul.js": "function mul_69se(a, b) {\n  return a * b;\n}\nmodule.exports = { mul_69se };\n"
+    }
+  },
+  {
+    "id": "multi_file_multi_root_835921",
+    "category": "multi_file_multi_root",
+    "description": "Two independent bugs in two files; both must be fixed in one patch",
+    "errorMessage": "FAIL: add works: Expected values to be strictly equal:\n-2 !== 14\nFAIL: mul works: Expected values to be strictly equal:\n14 !== 48\n2 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "mathadd.js": "function add_hg4y(a, b) {\n  return a + b;\n}\nmodule.exports = { add_hg4y };\n",
+      "mathmul.js": "function mul_7fif(a, b) {\n  return a * b;\n}\nmodule.exports = { mul_7fif };\n"
+    }
+  },
+  {
+    "id": "multi_file_multi_root_954706",
+    "category": "multi_file_multi_root",
+    "description": "Two independent bugs in two files; both must be fixed in one patch",
+    "errorMessage": "FAIL: add works: Expected values to be strictly equal:\n3 !== 9\nFAIL: mul works: Expected values to be strictly equal:\n9 !== 18\n2 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "mathadd.js": "function add_48bh(a, b) {\n  return a + b;\n}\nmodule.exports = { add_48bh };\n",
+      "mathmul.js": "function mul_bnnb(a, b) {\n  return a * b;\n}\nmodule.exports = { mul_bnnb };\n"
+    }
+  },
+  {
+    "id": "multi_file_multi_root_1073491",
+    "category": "multi_file_multi_root",
+    "description": "Two independent bugs in two files; both must be fixed in one patch",
+    "errorMessage": "FAIL: add works: Expected values to be strictly equal:\n0 !== 18\nFAIL: mul works: Expected values to be strictly equal:\n18 !== 81\n2 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "mathadd.js": "function add_avmf(a, b) {\n  return a + b;\n}\nmodule.exports = { add_avmf };\n",
+      "mathmul.js": "function mul_lay2(a, b) {\n  return a * b;\n}\nmodule.exports = { mul_lay2 };\n"
+    }
+  },
+  {
+    "id": "multi_file_multi_root_1192276",
+    "category": "multi_file_multi_root",
+    "description": "Two independent bugs in two files; both must be fixed in one patch",
+    "errorMessage": "FAIL: add works: Expected values to be strictly equal:\n3 !== 21\nFAIL: mul works: Expected values to be strictly equal:\n21 !== 108\n2 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "mathadd.js": "function add_5opl(a, b) {\n  return a + b;\n}\nmodule.exports = { add_5opl };\n",
+      "mathmul.js": "function mul_iz7w(a, b) {\n  return a * b;\n}\nmodule.exports = { mul_iz7w };\n"
+    }
+  },
+  {
+    "id": "multi_file_single_root_115292",
+    "category": "multi_file_single_root",
+    "description": "Shared money util adds rate as flat amount; both invoice and cart fail. Fix only money.js",
+    "errorMessage": "Detected 2 distinct failures — fix ALL of them:\n\nFAIL: invoice applies tax as a percentage: Expected values to be strictly equal:\n382.05 !== 401.1\nFAIL: cart applies tax as a percentage: Expected values to be strictly equal:\n+ actual - expected\n+ 1910.05\n- 2005.5\n\n--- next failure ---\n\n2 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "money.js": "function withTax_mc9o(amount, rate) {\n  return Math.round(amount * (1 + rate) * 100) / 100;\n}\nmodule.exports = { withTax_mc9o };\n",
+      "invoice.js": "const { withTax_mc9o } = require('./money');\nfunction invoiceTotal(price) { return withTax_mc9o(price, 0.05); }\nmodule.exports = { invoiceTotal };\n",
+      "cart.js": "const { withTax_mc9o } = require('./money');\nfunction cartTotal(price, qty) { return withTax_mc9o(price * qty, 0.05); }\nmodule.exports = { cartTotal };\n"
+    }
+  },
+  {
+    "id": "multi_file_single_root_234077",
+    "category": "multi_file_single_root",
+    "description": "Shared money util adds rate as flat amount; both invoice and cart fail. Fix only money.js",
+    "errorMessage": "FAIL: invoice applies tax as a percentage: Expected values to be strictly equal:\n263.05 !== 276.15\nFAIL: cart applies tax as a percentage: Expected values to be strictly equal:\n526.05 !== 552.3\n2 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "money.js": "function withTax_dvlw(amount, rate) {\n  return Math.round(amount * (1 + rate) * 100) / 100;\n}\nmodule.exports = { withTax_dvlw };\n",
+      "invoice.js": "const { withTax_dvlw } = require('./money');\nfunction invoiceTotal(price) { return withTax_dvlw(price, 0.05); }\nmodule.exports = { invoiceTotal };\n",
+      "cart.js": "const { withTax_dvlw } = require('./money');\nfunction cartTotal(price, qty) { return withTax_dvlw(price * qty, 0.05); }\nmodule.exports = { cartTotal };\n"
+    }
+  },
+  {
+    "id": "multi_file_single_root_352862",
+    "category": "multi_file_single_root",
+    "description": "Shared money util adds rate as flat amount; both invoice and cart fail. Fix only money.js",
+    "errorMessage": "FAIL: invoice applies tax as a percentage: Expected values to be strictly equal:\n132.1 !== 145.2\nFAIL: cart applies tax as a percentage: Expected values to be strictly equal:\n396.1 !== 435.6\n2 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "money.js": "function withTax_ffey(amount, rate) {\n  return Math.round(amount * (1 + rate) * 100) / 100;\n}\nmodule.exports = { withTax_ffey };\n",
+      "invoice.js": "const { withTax_ffey } = require('./money');\nfunction invoiceTotal(price) { return withTax_ffey(price, 0.1); }\nmodule.exports = { invoiceTotal };\n",
+      "cart.js": "const { withTax_ffey } = require('./money');\nfunction cartTotal(price, qty) { return withTax_ffey(price * qty, 0.1); }\nmodule.exports = { cartTotal };\n"
+    }
+  },
+  {
+    "id": "multi_file_single_root_471647",
+    "category": "multi_file_single_root",
+    "description": "Shared money util adds rate as flat amount; both invoice and cart fail. Fix only money.js",
+    "errorMessage": "FAIL: invoice applies tax as a percentage: Expected values to be strictly equal:\n228.2 !== 273.6\nFAIL: cart applies tax as a percentage: Expected values to be strictly equal:\n1140.2 !== 1368\n2 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "money.js": "function withTax_8lvd(amount, rate) {\n  return Math.round(amount * (1 + rate) * 100) / 100;\n}\nmodule.exports = { withTax_8lvd };\n",
+      "invoice.js": "const { withTax_8lvd } = require('./money');\nfunction invoiceTotal(price) { return withTax_8lvd(price, 0.2); }\nmodule.exports = { invoiceTotal };\n",
+      "cart.js": "const { withTax_8lvd } = require('./money');\nfunction cartTotal(price, qty) { return withTax_8lvd(price * qty, 0.2); }\nmodule.exports = { cartTotal };\n"
+    }
+  },
+  {
+    "id": "multi_file_single_root_590432",
+    "category": "multi_file_single_root",
+    "description": "Shared money util adds rate as flat amount; both invoice and cart fail. Fix only money.js",
+    "errorMessage": "FAIL: invoice applies tax as a percentage: Expected values to be strictly equal:\n134.1 !== 147.4\nFAIL: cart applies tax as a percentage: Expected values to be strictly equal:\n670.1 !== 737\n2 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "money.js": "function withTax_ihp7(amount, rate) {\n  return Math.round(amount * (1 + rate) * 100) / 100;\n}\nmodule.exports = { withTax_ihp7 };\n",
+      "invoice.js": "const { withTax_ihp7 } = require('./money');\nfunction invoiceTotal(price) { return withTax_ihp7(price, 0.1); }\nmodule.exports = { invoiceTotal };\n",
+      "cart.js": "const { withTax_ihp7 } = require('./money');\nfunction cartTotal(price, qty) { return withTax_ihp7(price * qty, 0.1); }\nmodule.exports = { cartTotal };\n"
+    }
+  },
+  {
+    "id": "multi_file_single_root_709217",
+    "category": "multi_file_single_root",
+    "description": "Shared money util adds rate as flat amount; both invoice and cart fail. Fix only money.js",
+    "errorMessage": "FAIL: invoice applies tax as a percentage: Expected values to be strictly equal:\n130.1 !== 143\nFAIL: cart applies tax as a percentage: Expected values to be strictly equal:\n260.1 !== 286\n2 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "money.js": "function withTax_6rhw(amount, rate) {\n  return Math.round(amount * (1 + rate) * 100) / 100;\n}\nmodule.exports = { withTax_6rhw };\n",
+      "invoice.js": "const { withTax_6rhw } = require('./money');\nfunction invoiceTotal(price) { return withTax_6rhw(price, 0.1); }\nmodule.exports = { invoiceTotal };\n",
+      "cart.js": "const { withTax_6rhw } = require('./money');\nfunction cartTotal(price, qty) { return withTax_6rhw(price * qty, 0.1); }\nmodule.exports = { cartTotal };\n"
+    }
+  },
+  {
+    "id": "multi_file_single_root_828002",
+    "category": "multi_file_single_root",
+    "description": "Shared money util adds rate as flat amount; both invoice and cart fail. Fix only money.js",
+    "errorMessage": "FAIL: invoice applies tax as a percentage: Expected values to be strictly equal:\n116.05 !== 121.8\nFAIL: cart applies tax as a percentage: Expected values to be strictly equal:\n464.05 !== 487.2\n2 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "money.js": "function withTax_45eg(amount, rate) {\n  return Math.round(amount * (1 + rate) * 100) / 100;\n}\nmodule.exports = { withTax_45eg };\n",
+      "invoice.js": "const { withTax_45eg } = require('./money');\nfunction invoiceTotal(price) { return withTax_45eg(price, 0.05); }\nmodule.exports = { invoiceTotal };\n",
+      "cart.js": "const { withTax_45eg } = require('./money');\nfunction cartTotal(price, qty) { return withTax_45eg(price * qty, 0.05); }\nmodule.exports = { cartTotal };\n"
+    }
+  },
+  {
+    "id": "multi_file_single_root_946787",
+    "category": "multi_file_single_root",
+    "description": "Shared money util adds rate as flat amount; both invoice and cart fail. Fix only money.js",
+    "errorMessage": "FAIL: invoice applies tax as a percentage: Expected values to be strictly equal:\n233.05 !== 244.65\nFAIL: cart applies tax as a percentage: Expected values to be strictly equal:\n932.05 !== 978.6\n2 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "money.js": "function withTax_4sld(amount, rate) {\n  return Math.round(amount * (1 + rate) * 100) / 100;\n}\nmodule.exports = { withTax_4sld };\n",
+      "invoice.js": "const { withTax_4sld } = require('./money');\nfunction invoiceTotal(price) { return withTax_4sld(price, 0.05); }\nmodule.exports = { invoiceTotal };\n",
+      "cart.js": "const { withTax_4sld } = require('./money');\nfunction cartTotal(price, qty) { return withTax_4sld(price * qty, 0.05); }\nmodule.exports = { cartTotal };\n"
+    }
+  },
+  {
+    "id": "multi_file_single_root_1065572",
+    "category": "multi_file_single_root",
+    "description": "Shared money util adds rate as flat amount; both invoice and cart fail. Fix only money.js",
+    "errorMessage": "FAIL: invoice applies tax as a percentage: Expected values to be strictly equal:\n190.2 !== 228\nFAIL: cart applies tax as a percentage: Expected values to be strictly equal:\n380.2 !== 456\n2 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "money.js": "function withTax_cu2r(amount, rate) {\n  return Math.round(amount * (1 + rate) * 100) / 100;\n}\nmodule.exports = { withTax_cu2r };\n",
+      "invoice.js": "const { withTax_cu2r } = require('./money');\nfunction invoiceTotal(price) { return withTax_cu2r(price, 0.2); }\nmodule.exports = { invoiceTotal };\n",
+      "cart.js": "const { withTax_cu2r } = require('./money');\nfunction cartTotal(price, qty) { return withTax_cu2r(price * qty, 0.2); }\nmodule.exports = { cartTotal };\n"
+    }
+  },
+  {
+    "id": "multi_file_single_root_1184357",
+    "category": "multi_file_single_root",
+    "description": "Shared money util adds rate as flat amount; both invoice and cart fail. Fix only money.js",
+    "errorMessage": "FAIL: invoice applies tax as a percentage: Expected values to be strictly equal:\n145.1 !== 159.5\nFAIL: cart applies tax as a percentage: Expected values to be strictly equal:\n580.1 !== 638\n2 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "money.js": "function withTax_6i31(amount, rate) {\n  return Math.round(amount * (1 + rate) * 100) / 100;\n}\nmodule.exports = { withTax_6i31 };\n",
+      "invoice.js": "const { withTax_6i31 } = require('./money');\nfunction invoiceTotal(price) { return withTax_6i31(price, 0.1); }\nmodule.exports = { invoiceTotal };\n",
+      "cart.js": "const { withTax_6i31 } = require('./money');\nfunction cartTotal(price, qty) { return withTax_6i31(price * qty, 0.1); }\nmodule.exports = { cartTotal };\n"
+    }
+  },
+  {
+    "id": "null_safety_28183",
+    "category": "null_safety",
+    "description": "Function crashes on null/undefined input instead of guarding",
+    "errorMessage": "FAIL: does not crash on null: Cannot read properties of null (reading 'split')\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function firstWord_hg17(s) {\n  if (s == null || typeof s !== 'string') return '';\n  return s.split(' ')[0];\n}\nmodule.exports = { firstWord_hg17 };\n"
+    }
+  },
+  {
+    "id": "null_safety_146968",
+    "category": "null_safety",
+    "description": "Function crashes on null/undefined input instead of guarding",
+    "errorMessage": "FAIL: does not crash on null: Cannot read properties of null (reading 'split')\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function firstWord_dyuv(s) {\n  if (s == null || typeof s !== 'string') return '';\n  return s.split(' ')[0];\n}\nmodule.exports = { firstWord_dyuv };\n"
+    }
+  },
+  {
+    "id": "null_safety_265753",
+    "category": "null_safety",
+    "description": "Function crashes on null/undefined input instead of guarding",
+    "errorMessage": "FAIL: does not crash on null: Cannot read properties of null (reading 'split')\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function firstWord_lcz0(s) {\n  if (s == null || typeof s !== 'string') return '';\n  return s.split(' ')[0];\n}\nmodule.exports = { firstWord_lcz0 };\n"
+    }
+  },
+  {
+    "id": "null_safety_384538",
+    "category": "null_safety",
+    "description": "Function crashes on null/undefined input instead of guarding",
+    "errorMessage": "FAIL: does not crash on null: Cannot read properties of null (reading 'split')\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function firstWord_dauc(s) {\n  if (s == null || typeof s !== 'string') return '';\n  return s.split(' ')[0];\n}\nmodule.exports = { firstWord_dauc };\n"
+    }
+  },
+  {
+    "id": "null_safety_503323",
+    "category": "null_safety",
+    "description": "Function crashes on null/undefined input instead of guarding",
+    "errorMessage": "FAIL: does not crash on null: Cannot read properties of null (reading 'split')\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function firstWord_lbws(s) {\n  if (s == null || typeof s !== 'string') return '';\n  return s.split(' ')[0];\n}\nmodule.exports = { firstWord_lbws };\n"
+    }
+  },
+  {
+    "id": "null_safety_622108",
+    "category": "null_safety",
+    "description": "Function crashes on null/undefined input instead of guarding",
+    "errorMessage": "FAIL: does not crash on null: Cannot read properties of null (reading 'split')\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function firstWord_2jyj(s) {\n  if (s == null || typeof s !== 'string') return '';\n  return s.split(' ')[0];\n}\nmodule.exports = { firstWord_2jyj };\n"
+    }
+  },
+  {
+    "id": "null_safety_740893",
+    "category": "null_safety",
+    "description": "Function crashes on null/undefined input instead of guarding",
+    "errorMessage": "FAIL: does not crash on null: Cannot read properties of null (reading 'split')\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function firstWord_24kg(s) {\n  if (s == null || typeof s !== 'string') return '';\n  return s.split(' ')[0];\n}\nmodule.exports = { firstWord_24kg };\n"
+    }
+  },
+  {
+    "id": "null_safety_859678",
+    "category": "null_safety",
+    "description": "Function crashes on null/undefined input instead of guarding",
+    "errorMessage": "FAIL: does not crash on null: Cannot read properties of null (reading 'split')\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function firstWord_ja5l(s) {\n  if (s == null || typeof s !== 'string') return '';\n  return s.split(' ')[0];\n}\nmodule.exports = { firstWord_ja5l };\n"
+    }
+  },
+  {
+    "id": "null_safety_978463",
+    "category": "null_safety",
+    "description": "Function crashes on null/undefined input instead of guarding",
+    "errorMessage": "FAIL: does not crash on null: Cannot read properties of null (reading 'split')\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function firstWord_7ht(s) {\n  if (s == null || typeof s !== 'string') return '';\n  return s.split(' ')[0];\n}\nmodule.exports = { firstWord_7ht };\n"
+    }
+  },
+  {
+    "id": "null_safety_1097248",
+    "category": "null_safety",
+    "description": "Function crashes on null/undefined input instead of guarding",
+    "errorMessage": "FAIL: does not crash on null: Cannot read properties of null (reading 'split')\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function firstWord_ihi1(s) {\n  if (s == null || typeof s !== 'string') return '';\n  return s.split(' ')[0];\n}\nmodule.exports = { firstWord_ihi1 };\n"
+    }
+  },
+  {
+    "id": "off_by_one_36102",
+    "category": "off_by_one",
+    "description": "1-based page index used as 0-based offset (off-by-one slice)",
+    "errorMessage": "Detected 2 distinct failures — fix ALL of them:\n\nFAIL: page 1 returns the first chunk: Expected values to be strictly deep-equal:\n+ actual - expected\n  [\n+   4,\n+   5,\n+   6\n\n--- next failure ---\n\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function page_2xqq(arr, page, size) {\n  // page is 1-based\n  return arr.slice((page - 1) * size, (page - 1) * size + size);\n}\nmodule.exports = { page_2xqq };\n"
+    }
+  },
+  {
+    "id": "off_by_one_154887",
+    "category": "off_by_one",
+    "description": "1-based page index used as 0-based offset (off-by-one slice)",
+    "errorMessage": "Detected 2 distinct failures — fix ALL of them:\n\nFAIL: page 1 returns the first chunk: Expected values to be strictly deep-equal:\n+ actual - expected\n  [\n+   3,\n+   4\n-   1,\n\n--- next failure ---\n\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function page_5zom(arr, page, size) {\n  // page is 1-based\n  return arr.slice((page - 1) * size, (page - 1) * size + size);\n}\nmodule.exports = { page_5zom };\n"
+    }
+  },
+  {
+    "id": "off_by_one_273672",
+    "category": "off_by_one",
+    "description": "1-based page index used as 0-based offset (off-by-one slice)",
+    "errorMessage": "Detected 2 distinct failures — fix ALL of them:\n\nFAIL: page 1 returns the first chunk: Expected values to be strictly deep-equal:\n+ actual - expected\n  [\n+   4,\n+   5,\n+   6\n\n--- next failure ---\n\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function page_b15k(arr, page, size) {\n  // page is 1-based\n  return arr.slice((page - 1) * size, (page - 1) * size + size);\n}\nmodule.exports = { page_b15k };\n"
+    }
+  },
+  {
+    "id": "off_by_one_392457",
+    "category": "off_by_one",
+    "description": "1-based page index used as 0-based offset (off-by-one slice)",
+    "errorMessage": "Detected 2 distinct failures — fix ALL of them:\n\nFAIL: page 1 returns the first chunk: Expected values to be strictly deep-equal:\n+ actual - expected\n  [\n+   3,\n+   4\n-   1,\n\n--- next failure ---\n\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function page_d62p(arr, page, size) {\n  // page is 1-based\n  return arr.slice((page - 1) * size, (page - 1) * size + size);\n}\nmodule.exports = { page_d62p };\n"
+    }
+  },
+  {
+    "id": "off_by_one_511242",
+    "category": "off_by_one",
+    "description": "1-based page index used as 0-based offset (off-by-one slice)",
+    "errorMessage": "Detected 2 distinct failures — fix ALL of them:\n\nFAIL: page 1 returns the first chunk: Expected values to be strictly deep-equal:\n+ actual - expected\n  [\n+   5,\n+   6,\n+   7,\n\n--- next failure ---\n\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function page_hhdv(arr, page, size) {\n  // page is 1-based\n  return arr.slice((page - 1) * size, (page - 1) * size + size);\n}\nmodule.exports = { page_hhdv };\n"
+    }
+  },
+  {
+    "id": "off_by_one_630027",
+    "category": "off_by_one",
+    "description": "1-based page index used as 0-based offset (off-by-one slice)",
+    "errorMessage": "Detected 2 distinct failures — fix ALL of them:\n\nFAIL: page 1 returns the first chunk: Expected values to be strictly deep-equal:\n+ actual - expected\n  [\n+   3,\n+   4\n-   1,\n\n--- next failure ---\n\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function page_8uo2(arr, page, size) {\n  // page is 1-based\n  return arr.slice((page - 1) * size, (page - 1) * size + size);\n}\nmodule.exports = { page_8uo2 };\n"
+    }
+  },
+  {
+    "id": "off_by_one_748812",
+    "category": "off_by_one",
+    "description": "1-based page index used as 0-based offset (off-by-one slice)",
+    "errorMessage": "Detected 2 distinct failures — fix ALL of them:\n\nFAIL: page 1 returns the first chunk: Expected values to be strictly deep-equal:\n+ actual - expected\n  [\n+   3,\n+   4\n-   1,\n\n--- next failure ---\n\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function page_88j3(arr, page, size) {\n  // page is 1-based\n  return arr.slice((page - 1) * size, (page - 1) * size + size);\n}\nmodule.exports = { page_88j3 };\n"
+    }
+  },
+  {
+    "id": "off_by_one_867597",
+    "category": "off_by_one",
+    "description": "1-based page index used as 0-based offset (off-by-one slice)",
+    "errorMessage": "Detected 2 distinct failures — fix ALL of them:\n\nFAIL: page 1 returns the first chunk: Expected values to be strictly deep-equal:\n+ actual - expected\n  [\n+   5,\n+   6,\n+   7,\n\n--- next failure ---\n\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function page_h3ju(arr, page, size) {\n  // page is 1-based\n  return arr.slice((page - 1) * size, (page - 1) * size + size);\n}\nmodule.exports = { page_h3ju };\n"
+    }
+  },
+  {
+    "id": "off_by_one_986382",
+    "category": "off_by_one",
+    "description": "1-based page index used as 0-based offset (off-by-one slice)",
+    "errorMessage": "Detected 2 distinct failures — fix ALL of them:\n\nFAIL: page 1 returns the first chunk: Expected values to be strictly deep-equal:\n+ actual - expected\n  [\n+   3,\n+   4\n-   1,\n\n--- next failure ---\n\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function page_3h8y(arr, page, size) {\n  // page is 1-based\n  return arr.slice((page - 1) * size, (page - 1) * size + size);\n}\nmodule.exports = { page_3h8y };\n"
+    }
+  },
+  {
+    "id": "off_by_one_1105167",
+    "category": "off_by_one",
+    "description": "1-based page index used as 0-based offset (off-by-one slice)",
+    "errorMessage": "Detected 2 distinct failures — fix ALL of them:\n\nFAIL: page 1 returns the first chunk: Expected values to be strictly deep-equal:\n+ actual - expected\n  [\n+   4,\n+   5,\n+   6\n\n--- next failure ---\n\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function page_5cl6(arr, page, size) {\n  // page is 1-based\n  return arr.slice((page - 1) * size, (page - 1) * size + size);\n}\nmodule.exports = { page_5cl6 };\n"
+    }
+  },
+  {
+    "id": "recursion_base_75697",
+    "category": "recursion_base",
+    "description": "Missing recursion base case causes infinite recursion",
+    "errorMessage": "FAIL: factorial of 5: Maximum call stack size exceeded\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function fact_dkyz(n) {\n  if (n <= 1) return 1;\n  return n * fact_dkyz(n - 1);\n}\nmodule.exports = { fact_dkyz };\n"
+    }
+  },
+  {
+    "id": "recursion_base_194482",
+    "category": "recursion_base",
+    "description": "Missing recursion base case causes infinite recursion",
+    "errorMessage": "FAIL: factorial of 7: Maximum call stack size exceeded\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function fact_hjbq(n) {\n  if (n <= 1) return 1;\n  return n * fact_hjbq(n - 1);\n}\nmodule.exports = { fact_hjbq };\n"
+    }
+  },
+  {
+    "id": "recursion_base_313267",
+    "category": "recursion_base",
+    "description": "Missing recursion base case causes infinite recursion",
+    "errorMessage": "FAIL: factorial of 6: Maximum call stack size exceeded\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function fact_3o4w(n) {\n  if (n <= 1) return 1;\n  return n * fact_3o4w(n - 1);\n}\nmodule.exports = { fact_3o4w };\n"
+    }
+  },
+  {
+    "id": "recursion_base_432052",
+    "category": "recursion_base",
+    "description": "Missing recursion base case causes infinite recursion",
+    "errorMessage": "FAIL: factorial of 6: Maximum call stack size exceeded\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function fact_6rjc(n) {\n  if (n <= 1) return 1;\n  return n * fact_6rjc(n - 1);\n}\nmodule.exports = { fact_6rjc };\n"
+    }
+  },
+  {
+    "id": "recursion_base_550837",
+    "category": "recursion_base",
+    "description": "Missing recursion base case causes infinite recursion",
+    "errorMessage": "FAIL: factorial of 7: Maximum call stack size exceeded\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function fact_i883(n) {\n  if (n <= 1) return 1;\n  return n * fact_i883(n - 1);\n}\nmodule.exports = { fact_i883 };\n"
+    }
+  },
+  {
+    "id": "recursion_base_669622",
+    "category": "recursion_base",
+    "description": "Missing recursion base case causes infinite recursion",
+    "errorMessage": "FAIL: factorial of 4: Maximum call stack size exceeded\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function fact_58qw(n) {\n  if (n <= 1) return 1;\n  return n * fact_58qw(n - 1);\n}\nmodule.exports = { fact_58qw };\n"
+    }
+  },
+  {
+    "id": "recursion_base_788407",
+    "category": "recursion_base",
+    "description": "Missing recursion base case causes infinite recursion",
+    "errorMessage": "FAIL: factorial of 4: Maximum call stack size exceeded\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function fact_5bog(n) {\n  if (n <= 1) return 1;\n  return n * fact_5bog(n - 1);\n}\nmodule.exports = { fact_5bog };\n"
+    }
+  },
+  {
+    "id": "recursion_base_907192",
+    "category": "recursion_base",
+    "description": "Missing recursion base case causes infinite recursion",
+    "errorMessage": "FAIL: factorial of 7: Maximum call stack size exceeded\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function fact_iqpf(n) {\n  if (n <= 1) return 1;\n  return n * fact_iqpf(n - 1);\n}\nmodule.exports = { fact_iqpf };\n"
+    }
+  },
+  {
+    "id": "recursion_base_1025977",
+    "category": "recursion_base",
+    "description": "Missing recursion base case causes infinite recursion",
+    "errorMessage": "FAIL: factorial of 6: Maximum call stack size exceeded\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function fact_7epm(n) {\n  if (n <= 1) return 1;\n  return n * fact_7epm(n - 1);\n}\nmodule.exports = { fact_7epm };\n"
+    }
+  },
+  {
+    "id": "recursion_base_1144762",
+    "category": "recursion_base",
+    "description": "Missing recursion base case causes infinite recursion",
+    "errorMessage": "FAIL: factorial of 4: Maximum call stack size exceeded\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function fact_68mt(n) {\n  if (n <= 1) return 1;\n  return n * fact_68mt(n - 1);\n}\nmodule.exports = { fact_68mt };\n"
+    }
+  },
+  {
+    "id": "regex_extract_59859",
+    "category": "regex_extract",
+    "description": "Regex captures only the first digit instead of all digits",
+    "errorMessage": "FAIL: extracts all digits: Expected values to be strictly equal:\n'4' !== '429'\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function digits_i5y0(s) {\n  return s.replace(/\\D/g, '');\n}\nmodule.exports = { digits_i5y0 };\n"
+    }
+  },
+  {
+    "id": "regex_extract_178644",
+    "category": "regex_extract",
+    "description": "Regex captures only the first digit instead of all digits",
+    "errorMessage": "FAIL: extracts all digits: Expected values to be strictly equal:\n'7' !== '78'\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function digits_ezzh(s) {\n  return s.replace(/\\D/g, '');\n}\nmodule.exports = { digits_ezzh };\n"
+    }
+  },
+  {
+    "id": "regex_extract_297429",
+    "category": "regex_extract",
+    "description": "Regex captures only the first digit instead of all digits",
+    "errorMessage": "FAIL: extracts all digits: Expected values to be strictly equal:\n'1' !== '123'\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function digits_1s8q(s) {\n  return s.replace(/\\D/g, '');\n}\nmodule.exports = { digits_1s8q };\n"
+    }
+  },
+  {
+    "id": "regex_extract_416214",
+    "category": "regex_extract",
+    "description": "Regex captures only the first digit instead of all digits",
+    "errorMessage": "FAIL: extracts all digits: Expected values to be strictly equal:\n'7' !== '78'\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function digits_5c4g(s) {\n  return s.replace(/\\D/g, '');\n}\nmodule.exports = { digits_5c4g };\n"
+    }
+  },
+  {
+    "id": "regex_extract_534999",
+    "category": "regex_extract",
+    "description": "Regex captures only the first digit instead of all digits",
+    "errorMessage": "FAIL: extracts all digits: Expected values to be strictly equal:\n'1' !== '123'\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function digits_eiau(s) {\n  return s.replace(/\\D/g, '');\n}\nmodule.exports = { digits_eiau };\n"
+    }
+  },
+  {
+    "id": "regex_extract_653784",
+    "category": "regex_extract",
+    "description": "Regex captures only the first digit instead of all digits",
+    "errorMessage": "FAIL: extracts all digits: Expected values to be strictly equal:\n'3' !== '357'\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function digits_6gpb(s) {\n  return s.replace(/\\D/g, '');\n}\nmodule.exports = { digits_6gpb };\n"
+    }
+  },
+  {
+    "id": "regex_extract_772569",
+    "category": "regex_extract",
+    "description": "Regex captures only the first digit instead of all digits",
+    "errorMessage": "FAIL: extracts all digits: Expected values to be strictly equal:\n'7' !== '78'\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function digits_28i6(s) {\n  return s.replace(/\\D/g, '');\n}\nmodule.exports = { digits_28i6 };\n"
+    }
+  },
+  {
+    "id": "regex_extract_891354",
+    "category": "regex_extract",
+    "description": "Regex captures only the first digit instead of all digits",
+    "errorMessage": "FAIL: extracts all digits: Expected values to be strictly equal:\n'7' !== '78'\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function digits_a6ye(s) {\n  return s.replace(/\\D/g, '');\n}\nmodule.exports = { digits_a6ye };\n"
+    }
+  },
+  {
+    "id": "regex_extract_1010139",
+    "category": "regex_extract",
+    "description": "Regex captures only the first digit instead of all digits",
+    "errorMessage": "FAIL: extracts all digits: Expected values to be strictly equal:\n'1' !== '123'\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function digits_jss2(s) {\n  return s.replace(/\\D/g, '');\n}\nmodule.exports = { digits_jss2 };\n"
+    }
+  },
+  {
+    "id": "regex_extract_1128924",
+    "category": "regex_extract",
+    "description": "Regex captures only the first digit instead of all digits",
+    "errorMessage": "FAIL: extracts all digits: Expected values to be strictly equal:\n'4' !== '429'\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function digits_c3kw(s) {\n  return s.replace(/\\D/g, '');\n}\nmodule.exports = { digits_c3kw };\n"
+    }
+  },
+  {
+    "id": "string_boundary_107373",
+    "category": "string_boundary",
+    "description": "Index s.length is one past the end (off-by-one on string index)",
+    "errorMessage": "FAIL: returns the last character: Expected values to be strictly equal:\nundefined !== 'h'\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function lastChar_goqn(s) {\n  return s[s.length - 1];\n}\nmodule.exports = { lastChar_goqn };\n"
+    }
+  },
+  {
+    "id": "string_boundary_226158",
+    "category": "string_boundary",
+    "description": "Index s.length is one past the end (off-by-one on string index)",
+    "errorMessage": "FAIL: returns the last character: Expected values to be strictly equal:\nundefined !== 'h'\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function lastChar_jjkz(s) {\n  return s[s.length - 1];\n}\nmodule.exports = { lastChar_jjkz };\n"
+    }
+  },
+  {
+    "id": "string_boundary_344943",
+    "category": "string_boundary",
+    "description": "Index s.length is one past the end (off-by-one on string index)",
+    "errorMessage": "FAIL: returns the last character: Expected values to be strictly equal:\nundefined !== 'n'\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function lastChar_awoc(s) {\n  return s[s.length - 1];\n}\nmodule.exports = { lastChar_awoc };\n"
+    }
+  },
+  {
+    "id": "string_boundary_463728",
+    "category": "string_boundary",
+    "description": "Index s.length is one past the end (off-by-one on string index)",
+    "errorMessage": "FAIL: returns the last character: Expected values to be strictly equal:\nundefined !== 'n'\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function lastChar_jjd8(s) {\n  return s[s.length - 1];\n}\nmodule.exports = { lastChar_jjd8 };\n"
+    }
+  },
+  {
+    "id": "string_boundary_582513",
+    "category": "string_boundary",
+    "description": "Index s.length is one past the end (off-by-one on string index)",
+    "errorMessage": "FAIL: returns the last character: Expected values to be strictly equal:\nundefined !== 'h'\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function lastChar_hp93(s) {\n  return s[s.length - 1];\n}\nmodule.exports = { lastChar_hp93 };\n"
+    }
+  },
+  {
+    "id": "string_boundary_701298",
+    "category": "string_boundary",
+    "description": "Index s.length is one past the end (off-by-one on string index)",
+    "errorMessage": "FAIL: returns the last character: Expected values to be strictly equal:\nundefined !== 'c'\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function lastChar_f1jq(s) {\n  return s[s.length - 1];\n}\nmodule.exports = { lastChar_f1jq };\n"
+    }
+  },
+  {
+    "id": "string_boundary_820083",
+    "category": "string_boundary",
+    "description": "Index s.length is one past the end (off-by-one on string index)",
+    "errorMessage": "FAIL: returns the last character: Expected values to be strictly equal:\nundefined !== 'c'\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function lastChar_je6u(s) {\n  return s[s.length - 1];\n}\nmodule.exports = { lastChar_je6u };\n"
+    }
+  },
+  {
+    "id": "string_boundary_938868",
+    "category": "string_boundary",
+    "description": "Index s.length is one past the end (off-by-one on string index)",
+    "errorMessage": "FAIL: returns the last character: Expected values to be strictly equal:\nundefined !== 'n'\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function lastChar_h9o1(s) {\n  return s[s.length - 1];\n}\nmodule.exports = { lastChar_h9o1 };\n"
+    }
+  },
+  {
+    "id": "string_boundary_1057653",
+    "category": "string_boundary",
+    "description": "Index s.length is one past the end (off-by-one on string index)",
+    "errorMessage": "FAIL: returns the last character: Expected values to be strictly equal:\nundefined !== 'e'\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function lastChar_1mih(s) {\n  return s[s.length - 1];\n}\nmodule.exports = { lastChar_1mih };\n"
+    }
+  },
+  {
+    "id": "string_boundary_1176438",
+    "category": "string_boundary",
+    "description": "Index s.length is one past the end (off-by-one on string index)",
+    "errorMessage": "FAIL: returns the last character: Expected values to be strictly equal:\nundefined !== 'c'\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function lastChar_h2u9(s) {\n  return s[s.length - 1];\n}\nmodule.exports = { lastChar_h2u9 };\n"
+    }
+  },
+  {
+    "id": "type_coercion_12345",
+    "category": "type_coercion",
+    "description": "CSV tokens left as strings cause string concatenation instead of numeric sum",
+    "errorMessage": "FAIL: total_m0om sums numerically: Expected values to be strictly equal:\n'0223423' !== 79\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function parseAmounts_6w6s(csv) {\n  // tokens must be parsed to numbers so arithmetic works downstream\n  return csv.split(',').map(s => Number(s.trim()));\n}\nfunction total_m0om(csv) {\n  return parseAmounts_6w6s(csv).reduce((a, b) => a + b, 0);\n}\nmodule.exports = { total_m0om, parseAmounts_6w6s };\n"
+    }
+  },
+  {
+    "id": "type_coercion_131130",
+    "category": "type_coercion",
+    "description": "CSV tokens left as strings cause string concatenation instead of numeric sum",
+    "errorMessage": "FAIL: total_8gem sums numerically: Expected values to be strictly equal:\n'0391335' !== 87\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function parseAmounts_bpdd(csv) {\n  // tokens must be parsed to numbers so arithmetic works downstream\n  return csv.split(',').map(s => Number(s.trim()));\n}\nfunction total_8gem(csv) {\n  return parseAmounts_bpdd(csv).reduce((a, b) => a + b, 0);\n}\nmodule.exports = { total_8gem, parseAmounts_bpdd };\n"
+    }
+  },
+  {
+    "id": "type_coercion_249915",
+    "category": "type_coercion",
+    "description": "CSV tokens left as strings cause string concatenation instead of numeric sum",
+    "errorMessage": "FAIL: total_a9gg sums numerically: Expected values to be strictly equal:\n'0322521' !== 78\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function parseAmounts_4rnw(csv) {\n  // tokens must be parsed to numbers so arithmetic works downstream\n  return csv.split(',').map(s => Number(s.trim()));\n}\nfunction total_a9gg(csv) {\n  return parseAmounts_4rnw(csv).reduce((a, b) => a + b, 0);\n}\nmodule.exports = { total_a9gg, parseAmounts_4rnw };\n"
+    }
+  },
+  {
+    "id": "type_coercion_368700",
+    "category": "type_coercion",
+    "description": "CSV tokens left as strings cause string concatenation instead of numeric sum",
+    "errorMessage": "FAIL: total_btds sums numerically: Expected values to be strictly equal:\n'019612' !== 37\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function parseAmounts_hs0p(csv) {\n  // tokens must be parsed to numbers so arithmetic works downstream\n  return csv.split(',').map(s => Number(s.trim()));\n}\nfunction total_btds(csv) {\n  return parseAmounts_hs0p(csv).reduce((a, b) => a + b, 0);\n}\nmodule.exports = { total_btds, parseAmounts_hs0p };\n"
+    }
+  },
+  {
+    "id": "type_coercion_487485",
+    "category": "type_coercion",
+    "description": "CSV tokens left as strings cause string concatenation instead of numeric sum",
+    "errorMessage": "FAIL: total_l0ij sums numerically: Expected values to be strictly equal:\n'0243221' !== 77\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function parseAmounts_hod2(csv) {\n  // tokens must be parsed to numbers so arithmetic works downstream\n  return csv.split(',').map(s => Number(s.trim()));\n}\nfunction total_l0ij(csv) {\n  return parseAmounts_hod2(csv).reduce((a, b) => a + b, 0);\n}\nmodule.exports = { total_l0ij, parseAmounts_hod2 };\n"
+    }
+  },
+  {
+    "id": "type_coercion_606270",
+    "category": "type_coercion",
+    "description": "CSV tokens left as strings cause string concatenation instead of numeric sum",
+    "errorMessage": "FAIL: total_kynm sums numerically: Expected values to be strictly equal:\n'0351839' !== 92\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function parseAmounts_jxtn(csv) {\n  // tokens must be parsed to numbers so arithmetic works downstream\n  return csv.split(',').map(s => Number(s.trim()));\n}\nfunction total_kynm(csv) {\n  return parseAmounts_jxtn(csv).reduce((a, b) => a + b, 0);\n}\nmodule.exports = { total_kynm, parseAmounts_jxtn };\n"
+    }
+  },
+  {
+    "id": "type_coercion_725055",
+    "category": "type_coercion",
+    "description": "CSV tokens left as strings cause string concatenation instead of numeric sum",
+    "errorMessage": "FAIL: total_fzxe sums numerically: Expected values to be strictly equal:\n'0282132' !== 81\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function parseAmounts_ckie(csv) {\n  // tokens must be parsed to numbers so arithmetic works downstream\n  return csv.split(',').map(s => Number(s.trim()));\n}\nfunction total_fzxe(csv) {\n  return parseAmounts_ckie(csv).reduce((a, b) => a + b, 0);\n}\nmodule.exports = { total_fzxe, parseAmounts_ckie };\n"
+    }
+  },
+  {
+    "id": "type_coercion_843840",
+    "category": "type_coercion",
+    "description": "CSV tokens left as strings cause string concatenation instead of numeric sum",
+    "errorMessage": "FAIL: total_b1da sums numerically: Expected values to be strictly equal:\n'0141011' !== 35\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function parseAmounts_amaq(csv) {\n  // tokens must be parsed to numbers so arithmetic works downstream\n  return csv.split(',').map(s => Number(s.trim()));\n}\nfunction total_b1da(csv) {\n  return parseAmounts_amaq(csv).reduce((a, b) => a + b, 0);\n}\nmodule.exports = { total_b1da, parseAmounts_amaq };\n"
+    }
+  },
+  {
+    "id": "type_coercion_962625",
+    "category": "type_coercion",
+    "description": "CSV tokens left as strings cause string concatenation instead of numeric sum",
+    "errorMessage": "FAIL: total_5pq3 sums numerically: Expected values to be strictly equal:\n'0282519' !== 72\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function parseAmounts_4cn9(csv) {\n  // tokens must be parsed to numbers so arithmetic works downstream\n  return csv.split(',').map(s => Number(s.trim()));\n}\nfunction total_5pq3(csv) {\n  return parseAmounts_4cn9(csv).reduce((a, b) => a + b, 0);\n}\nmodule.exports = { total_5pq3, parseAmounts_4cn9 };\n"
+    }
+  },
+  {
+    "id": "type_coercion_1081410",
+    "category": "type_coercion",
+    "description": "CSV tokens left as strings cause string concatenation instead of numeric sum",
+    "errorMessage": "FAIL: total_3m7u sums numerically: Expected values to be strictly equal:\n'05718' !== 30\n1 check(s) failed\nnpm ERR! Test failed.  See above for more details.",
+    "fix": {
+      "index.js": "function parseAmounts_ehdg(csv) {\n  // tokens must be parsed to numbers so arithmetic works downstream\n  return csv.split(',').map(s => Number(s.trim()));\n}\nfunction total_3m7u(csv) {\n  return parseAmounts_ehdg(csv).reduce((a, b) => a + b, 0);\n}\nmodule.exports = { total_3m7u, parseAmounts_ehdg };\n"
+    }
+  }
+]

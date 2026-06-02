@@ -1,56 +1,139 @@
 const { logger } = require('../utils/logger');
 
-async function callLLM({ system, user, maxTokens = 2000 }) {
+// Groq/Llama models sometimes wrap structured answers in markdown fences or
+// surrounding prose (e.g. "Here's the JSON: ```json {...} ```"). Many agents
+// JSON.parse the result directly, so normalize to the embedded JSON when the
+// extracted candidate is valid JSON. Plain prose is returned unchanged.
+function sanitizeLLMText(content) {
+  if (!content || typeof content !== 'string') return content;
+  let t = content.trim();
+
+  const fence = t.match(/```(?:[a-zA-Z]+)?\s*([\s\S]*?)```/);
+  if (fence && fence[1].trim()) {
+    t = fence[1].trim();
+  }
+
+  try {
+    JSON.parse(t);
+    return t;
+  } catch (_) { /* not pure JSON; try to extract a balanced object/array */ }
+
+  const start = t.search(/[{[]/);
+  if (start !== -1) {
+    const close = t[start] === '{' ? '}' : ']';
+    const end = t.lastIndexOf(close);
+    if (end > start) {
+      const candidate = t.slice(start, end + 1);
+      try {
+        JSON.parse(candidate);
+        return candidate;
+      } catch (_) { /* leave as-is */ }
+    }
+  }
+
+  return t;
+}
+
+function mockResponse() {
+  return JSON.stringify({
+    errorMessage: 'Mock LLM response - configure an LLM provider',
+    stackTrace: '',
+    rootCause: 'LLM not configured',
+    affectedFiles: [],
+    type: 'unknown',
+    summary: 'LLM not configured',
+    severity: 'medium',
+  });
+}
+
+async function callGroq({ system, user, maxTokens }) {
+  const apiKey = process.env.GROQ_API_KEY;
+  const apiUrl = process.env.GROQ_API_URL || 'https://api.groq.com/openai/v1';
+  const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+
+  const response = await fetch(`${apiUrl}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        ...(system ? [{ role: 'system', content: system }] : []),
+        { role: 'user', content: user },
+      ],
+      max_tokens: maxTokens,
+      temperature: 0.2,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    logger.error('LLM API error', { provider: 'groq', status: response.status, error });
+    throw new Error(`LLM API error: ${response.status} - ${error}`);
+  }
+
+  const data = await response.json();
+  const text = data.choices?.[0]?.message?.content || '';
+  if (!text) {
+    logger.warn('LLM returned empty response', { provider: 'groq', data });
+  }
+  return sanitizeLLMText(text);
+}
+
+async function callPageGrid({ system, user, maxTokens }) {
   const apiKey = process.env.PAGEGRID_API_KEY;
   const apiUrl = process.env.PAGEGRID_API_URL || 'https://api.pagegrid.in';
   const model = process.env.PAGEGRID_MODEL || 'claude-sonnet-4-6';
 
-  if (!apiKey) {
-    logger.warn('PAGEGRID_API_KEY not set, returning mock response');
-    return JSON.stringify({
-      errorMessage: 'Mock LLM response - configure PAGEGRID_API_KEY',
-      stackTrace: '',
-      rootCause: 'LLM not configured',
-      affectedFiles: [],
-      type: 'unknown',
-      summary: 'LLM not configured',
-      severity: 'medium',
-    });
+  const response = await fetch(`${apiUrl}/v1/messages`, {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      system,
+      messages: [
+        { role: 'user', content: user },
+      ],
+      max_tokens: maxTokens,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    logger.error('LLM API error', { provider: 'pagegrid', status: response.status, error });
+    throw new Error(`LLM API error: ${response.status} - ${error}`);
+  }
+
+  const data = await response.json();
+  const text = data.content?.[0]?.text || '';
+  if (!text) {
+    logger.warn('LLM returned empty response', { provider: 'pagegrid', data });
+  }
+  return text;
+}
+
+async function callLLM({ system, user, maxTokens = 2000 }) {
+  const provider = (
+    process.env.LLM_PROVIDER || (process.env.GROQ_API_KEY ? 'groq' : 'pagegrid')
+  ).toLowerCase();
+
+  const hasKey = provider === 'groq' ? !!process.env.GROQ_API_KEY : !!process.env.PAGEGRID_API_KEY;
+  if (!hasKey) {
+    logger.warn(`LLM provider "${provider}" has no API key set, returning mock response`);
+    return mockResponse();
   }
 
   try {
-    const response = await fetch(`${apiUrl}/v1/messages`, {
-      method: 'POST',
-      headers: {
-        'x-api-key': apiKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        system,
-        messages: [
-          { role: 'user', content: user },
-        ],
-        max_tokens: maxTokens,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      logger.error('LLM API error', { status: response.status, error });
-      throw new Error(`LLM API error: ${response.status} - ${error}`);
-    }
-
-    const data = await response.json();
-    const text = data.content?.[0]?.text || '';
-
-    if (!text) {
-      logger.warn('LLM returned empty response', { data });
-    }
-
-    return text;
+    return provider === 'groq'
+      ? await callGroq({ system, user, maxTokens })
+      : await callPageGrid({ system, user, maxTokens });
   } catch (err) {
-    logger.error('LLM call failed', { error: err.message });
+    logger.error('LLM call failed', { provider, error: err.message });
     throw err;
   }
 }

@@ -40,7 +40,7 @@ function stripTimestamp(line) {
 // Lines that signal a real failure worth repairing.
 const ERROR_SIGNAL = /(assertion|assertionerror|\berror\b|exception|fail(?:ed|ure|ing)?|fatal|npm err!|panic|traceback|segfault|cannot find|is not defined|is not a function|unexpected|syntaxerror|typeerror|referenceerror|rangeerror|expected .* (?:to|but|received)|✕|✖|✗|##\[error\])/i;
 // Noise we never want to treat as the primary error.
-const ERROR_NOISE = /(0 error|no error|warning|deprecat|##\[warning\]|npm warn|--report-error|error-format|on error)/i;
+const ERROR_NOISE = /(0 error|no error|warning|deprecat|##\[warning\]|npm warn|--report-error|error-format|on error|process completed with exit code|exited with code|##\[error\]process completed)/i;
 // Stack-frame lines (JS "at ...", Python "File ...", Go ".go:NN").
 const STACK_LINE = /^(\s*at\s+|\s*File\s+"|.*\.\w+:\d+:\d+|\s+#\d+\s)/;
 
@@ -55,28 +55,51 @@ function extractError(rawLog) {
   const meaningful = lines.filter((l) => l.trim() && !/\(logs unavailable\)/i.test(l));
   if (meaningful.length === 0) return empty;
 
+  // Collect EVERY distinct failure block, not just the first. A single CI run
+  // can contain multiple independent failing assertions (e.g. two unrelated
+  // functions in one module). If we only feed the first one to the patch
+  // generator it produces a partial fix and the build stays red. Each block is
+  // the signal line plus a few following context lines; a signal that falls
+  // inside an already-captured block does not start a new one (so a multi-line
+  // assertion message stays grouped as one failure).
+  const BLOCK_LINES = 6;
+  const MAX_BLOCKS = 12;
+  const covered = new Set();
+  const blocks = [];
+  const seen = new Set();
   let firstIdx = -1;
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i];
-    if (!l.trim()) continue;
-    if (ERROR_SIGNAL.test(l) && !ERROR_NOISE.test(l)) {
-      firstIdx = i;
-      break;
+    if (!l.trim() || covered.has(i)) continue;
+    if (!(ERROR_SIGNAL.test(l) && !ERROR_NOISE.test(l))) continue;
+    if (firstIdx === -1) firstIdx = i;
+    const blockLines = [];
+    for (let j = i; j < lines.length && blockLines.length < BLOCK_LINES; j++) {
+      covered.add(j);
+      const t = lines[j].trimEnd();
+      if (t.trim()) blockLines.push(t);
     }
+    const block = blockLines.join('\n').trim();
+    // De-duplicate repeated identical failures (e.g. retried steps).
+    const key = blockLines[0] ? blockLines[0].trim().toLowerCase() : block.toLowerCase();
+    if (block && !seen.has(key)) {
+      seen.add(key);
+      blocks.push(block);
+    }
+    if (blocks.length >= MAX_BLOCKS) break;
   }
-  if (firstIdx === -1) return empty;
+  if (firstIdx === -1 || blocks.length === 0) return empty;
 
-  // errorMessage: the signal line plus a few following context lines.
-  const msgLines = [];
-  for (let i = firstIdx; i < lines.length && msgLines.length < 6; i++) {
-    const l = lines[i].trimEnd();
-    if (l.trim()) msgLines.push(l);
-  }
-  const errorMessage = msgLines.join('\n').slice(0, 1500);
+  // errorMessage enumerates all distinct failures so the patch generator fixes
+  // every one of them, not just the first.
+  const header = blocks.length > 1
+    ? `Detected ${blocks.length} distinct failures — fix ALL of them:\n\n`
+    : '';
+  const errorMessage = (header + blocks.join('\n\n--- next failure ---\n\n')).slice(0, 4000);
 
-  // stackTrace: contiguous stack frames near the error.
+  // stackTrace: stack frames found anywhere in the log (across all failures).
   const stackLines = [];
-  for (let i = firstIdx; i < lines.length && stackLines.length < 20; i++) {
+  for (let i = 0; i < lines.length && stackLines.length < 30; i++) {
     if (STACK_LINE.test(lines[i])) stackLines.push(lines[i].trim());
   }
   const stackTrace = stackLines.join('\n').slice(0, 2000);
@@ -86,6 +109,7 @@ function extractError(rawLog) {
   const fileRe = /([\w./-]+\.(?:js|jsx|ts|tsx|py|go|rb|java|rs|c|cpp|cs|php)):\d+/g;
   const files = new Set();
   const scanText = `${errorMessage}\n${stackTrace}`;
+  void firstIdx;
   let m;
   while ((m = fileRe.exec(scanText)) !== null) {
     let p = m[1];
@@ -100,7 +124,7 @@ function extractError(rawLog) {
   return {
     errorMessage,
     stackTrace,
-    rootCause: msgLines[0] ? msgLines[0].trim().slice(0, 300) : '',
+    rootCause: blocks[0] ? blocks[0].split('\n')[0].trim().slice(0, 300) : '',
     affectedFiles: Array.from(files).slice(0, 10),
   };
 }
@@ -198,4 +222,4 @@ function normalizeLogBody(resp) {
   return '';
 }
 
-module.exports = { parseLog };
+module.exports = { parseLog, extractError };

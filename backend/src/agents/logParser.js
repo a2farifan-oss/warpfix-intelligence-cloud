@@ -69,14 +69,11 @@ async function fetchCILogs(workflowRun, installationId, repository) {
     let logs = '';
 
     for (const job of failedJobs.slice(0, 3)) {
-      try {
-        const logResponse = await octokit.request('GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs', {
-          owner,
-          repo,
-          job_id: job.id,
-        });
-        logs += `\n--- Job: ${job.name} ---\n${logResponse.data}\n`;
-      } catch {
+      const jobLog = await fetchJobLog(octokit, owner, repo, job.id);
+      if (jobLog) {
+        logs += `\n--- Job: ${job.name} ---\n${jobLog}\n`;
+      } else {
+        logger.warn('CI job logs unavailable', { repo: `${owner}/${repo}`, job: job.name, job_id: job.id });
         logs += `\n--- Job: ${job.name} --- (logs unavailable)\n`;
       }
     }
@@ -86,6 +83,40 @@ async function fetchCILogs(workflowRun, installationId, repository) {
     logger.error('Failed to fetch CI logs', { error: err.message });
     return '';
   }
+}
+
+// The job-logs endpoint 302-redirects to a short-lived blob URL and may return
+// the body as text or as binary depending on the Octokit build. Handle all
+// cases (and the redirect surfacing as an error) so logs are actually retrieved.
+async function fetchJobLog(octokit, owner, repo, jobId) {
+  try {
+    const resp = await octokit.request('GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs', {
+      owner, repo, job_id: jobId,
+    });
+    return normalizeLogBody(resp);
+  } catch (err) {
+    const loc = err?.response?.headers?.location || err?.response?.url || err?.url;
+    if (loc) {
+      try {
+        const r = await fetch(loc);
+        if (r.ok) return await r.text();
+      } catch (_) { /* fall through */ }
+    }
+    logger.warn('Job log fetch failed', { repo: `${owner}/${repo}`, job_id: jobId, error: err.message });
+    return '';
+  }
+}
+
+function normalizeLogBody(resp) {
+  const data = resp?.data;
+  if (typeof data === 'string' && data.trim()) return data;
+  if (data instanceof ArrayBuffer) return Buffer.from(data).toString('utf8');
+  if (Buffer.isBuffer(data)) return data.toString('utf8');
+  if (data && typeof data === 'object' && typeof data.toString === 'function') {
+    const s = data.toString('utf8');
+    if (s && s !== '[object Object]') return s;
+  }
+  return '';
 }
 
 module.exports = { parseLog };

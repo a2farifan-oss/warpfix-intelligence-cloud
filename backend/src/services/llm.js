@@ -117,6 +117,16 @@ async function callPageGrid({ system, user, maxTokens }) {
   return text;
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Parse the "try again in 1.63s" hint Groq returns on rate limits; fall back to
+// exponential backoff when no hint is present.
+function retryDelayMs(errMessage, attempt) {
+  const m = /try again in ([\d.]+)s/i.exec(errMessage || '');
+  if (m) return Math.ceil(parseFloat(m[1]) * 1000) + 250;
+  return Math.min(8000, 500 * 2 ** attempt);
+}
+
 async function callLLM({ system, user, maxTokens = 2000 }) {
   const provider = (
     process.env.LLM_PROVIDER || (process.env.GROQ_API_KEY ? 'groq' : 'pagegrid')
@@ -128,14 +138,27 @@ async function callLLM({ system, user, maxTokens = 2000 }) {
     return mockResponse();
   }
 
-  try {
-    return provider === 'groq'
-      ? await callGroq({ system, user, maxTokens })
-      : await callPageGrid({ system, user, maxTokens });
-  } catch (err) {
-    logger.error('LLM call failed', { provider, error: err.message });
-    throw err;
+  const maxAttempts = parseInt(process.env.LLM_MAX_RETRIES, 10) || 4;
+  let lastErr;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return provider === 'groq'
+        ? await callGroq({ system, user, maxTokens })
+        : await callPageGrid({ system, user, maxTokens });
+    } catch (err) {
+      lastErr = err;
+      const isRateLimit = /\b429\b/.test(err.message) || /rate limit/i.test(err.message);
+      if (isRateLimit && attempt < maxAttempts - 1) {
+        const delay = retryDelayMs(err.message, attempt);
+        logger.warn('LLM rate limited, backing off', { provider, attempt: attempt + 1, delay });
+        await sleep(delay);
+        continue;
+      }
+      logger.error('LLM call failed', { provider, error: err.message });
+      throw err;
+    }
   }
+  throw lastErr;
 }
 
 module.exports = { callLLM };

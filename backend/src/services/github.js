@@ -2,6 +2,27 @@ const { Octokit } = require('octokit');
 const jwt = require('jsonwebtoken');
 const { logger } = require('../utils/logger');
 
+// Honor GitHub's primary AND secondary (abuse) rate limits. WarpFix makes
+// mutative calls (create branch/commit/PR/comment/labels) across many repos;
+// without backoff a burst from one busy repo can trip the secondary rate limit
+// and get the WHOLE App throttled — degrading every customer. The throttling
+// plugin (bundled with `octokit`) waits out Retry-After and we retry a bounded
+// number of times, per GitHub's REST best-practices.
+const throttle = {
+  onRateLimit(retryAfter, options, _octokit, retryCount) {
+    logger.warn('GitHub primary rate limit hit', {
+      method: options.method, url: options.url, retryAfter, retryCount,
+    });
+    return retryCount < 2; // retry up to twice after waiting
+  },
+  onSecondaryRateLimit(retryAfter, options, _octokit, retryCount) {
+    logger.warn('GitHub secondary (abuse) rate limit hit', {
+      method: options.method, url: options.url, retryAfter, retryCount,
+    });
+    return retryCount < 2;
+  },
+};
+
 function createAppJWT() {
   const appId = process.env.GITHUB_APP_ID;
   const privateKey = process.env.GITHUB_PRIVATE_KEY?.replace(/\\n/g, '\n');
@@ -22,17 +43,21 @@ function createAppJWT() {
   );
 }
 
+function makeOctokit(auth) {
+  return new Octokit({ auth, throttle });
+}
+
 async function getInstallationOctokit(installationId) {
   try {
     const appJWT = createAppJWT();
-    const appOctokit = new Octokit({ auth: appJWT });
+    const appOctokit = makeOctokit(appJWT);
 
     const { data } = await appOctokit.request(
       'POST /app/installations/{installation_id}/access_tokens',
       { installation_id: installationId }
     );
 
-    return new Octokit({ auth: data.token });
+    return makeOctokit(data.token);
   } catch (err) {
     logger.error('Failed to get installation token', { installationId, error: err.message });
     throw err;
@@ -43,7 +68,7 @@ async function getInstallationOctokit(installationId) {
 // operations like cloning a repo over HTTPS (x-access-token:<token>@github.com).
 async function getInstallationToken(installationId) {
   const appJWT = createAppJWT();
-  const appOctokit = new Octokit({ auth: appJWT });
+  const appOctokit = makeOctokit(appJWT);
   const { data } = await appOctokit.request(
     'POST /app/installations/{installation_id}/access_tokens',
     { installation_id: installationId }
@@ -52,7 +77,7 @@ async function getInstallationToken(installationId) {
 }
 
 async function getUserOctokit(accessToken) {
-  return new Octokit({ auth: accessToken });
+  return makeOctokit(accessToken);
 }
 
 module.exports = { getInstallationOctokit, getInstallationToken, getUserOctokit, createAppJWT };

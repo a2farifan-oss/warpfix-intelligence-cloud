@@ -4,6 +4,7 @@ const { logger } = require('../utils/logger');
 const { enqueueRepairJob, enqueueReviewJob, enqueueChatJob } = require('../queue/producer');
 const { query } = require('../models/database');
 const { captureOrgPreference, detectPreferenceFromPREdit } = require('../agents/intelligenceGrowth');
+const { captureLearnedFix } = require('../agents/learnedFixes');
 const { resolveUserIdForInstallation, saveInstallationRepos } = require('../services/installations');
 const router = express.Router();
 
@@ -12,7 +13,16 @@ function verifyGitHubSignature(req, res, next) {
   const secret = process.env.GITHUB_WEBHOOK_SECRET;
 
   if (!secret) {
-    logger.warn('GITHUB_WEBHOOK_SECRET not set, skipping verification');
+    // Without a secret, anyone who knows the URL could POST forged webhooks and
+    // trigger repairs/spam. We can't fail-closed unconditionally (it would take
+    // down a live deploy whose secret happens to be unset), so this is opt-in:
+    // set WARPFIX_REQUIRE_WEBHOOK_SECRET=on once the secret is configured to
+    // reject all unsigned deliveries. Otherwise we log loudly and continue.
+    if (String(process.env.WARPFIX_REQUIRE_WEBHOOK_SECRET || '').toLowerCase() === 'on') {
+      logger.error('GITHUB_WEBHOOK_SECRET not set but enforcement is on — rejecting webhook');
+      return res.status(401).json({ error: 'Webhook secret not configured' });
+    }
+    logger.warn('GITHUB_WEBHOOK_SECRET not set, skipping verification (set WARPFIX_REQUIRE_WEBHOOK_SECRET=on to enforce)');
     return next();
   }
 
@@ -161,9 +171,15 @@ router.post('/github', verifyGitHubSignature, async (req, res) => {
         // instead of the internal sandbox pass rate.
         if (payload.action === 'closed' && pr.head?.ref?.startsWith('warpfix/')) {
           try {
+            // Scope by repository — pr_number is only unique WITHIN a repo, so
+            // updating by pr_number alone would corrupt the acceptance metric
+            // for any other repo that happens to have a WarpFix PR with the
+            // same number.
             await query(
-              `UPDATE repairs SET pr_state = $1, accepted = $2, updated_at = NOW() WHERE pr_number = $3`,
-              [pr.merged ? 'merged' : 'closed', !!pr.merged, pr.number]
+              `UPDATE repairs SET pr_state = $1, accepted = $2, updated_at = NOW()
+               WHERE pr_number = $3
+                 AND repository_id = (SELECT id FROM repositories WHERE github_id = $4)`,
+              [pr.merged ? 'merged' : 'closed', !!pr.merged, pr.number, repo.id]
             );
           } catch (e) {
             logger.debug('Failed to record PR acceptance', { error: e.message });
@@ -175,6 +191,11 @@ router.post('/github', verifyGitHubSignature, async (req, res) => {
           logger.info('WarpFix PR merged — checking for org preference signals', {
             repo: repo.full_name, pr: pr.number,
           });
+
+          // Feedback loop: a merge means the fix was accepted — store it as a
+          // verified (error -> fix) pair so retrieval learns from real outcomes.
+          captureLearnedFix({ repoGithubId: repo.id, prNumber: pr.number })
+            .catch((e) => logger.debug('captureLearnedFix error', { error: e.message }));
 
           const userId = await resolveUserIdForInstallation(installId);
 

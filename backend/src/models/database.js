@@ -125,6 +125,20 @@ async function runMigrations() {
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
 
+    -- Feedback loop: every WarpFix PR a customer actually MERGES is captured
+    -- here as a verified (error -> working fix) pair. Retrieval reads from this
+    -- in addition to the shipped KB, so the product genuinely learns from real
+    -- accepted fixes over time instead of staying frozen at the seed corpus.
+    CREATE TABLE IF NOT EXISTS learned_fixes (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      repository_id UUID REFERENCES repositories(id) ON DELETE SET NULL,
+      category VARCHAR(100),
+      error_message TEXT NOT NULL,
+      fix_json JSONB NOT NULL,
+      pr_number INTEGER,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
     CREATE TABLE IF NOT EXISTS subscriptions (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       user_id UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -230,6 +244,7 @@ async function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_learnings_user ON learnings(user_id);
     CREATE INDEX IF NOT EXISTS idx_learnings_repo ON learnings(repository_id);
     CREATE INDEX IF NOT EXISTS idx_repo_configs_repo ON repo_configs(repository_id);
+    CREATE INDEX IF NOT EXISTS idx_learned_fixes_created ON learned_fixes(created_at);
 
     -- Admin tables
     CREATE TABLE IF NOT EXISTS admins (

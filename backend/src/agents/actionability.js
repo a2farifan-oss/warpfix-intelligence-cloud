@@ -16,7 +16,7 @@
 // Infra / config / environment failures: a source patch cannot fix these, so we
 // must NOT open a code PR. Each entry: a matcher + a short human reason.
 const INFRA_RULES = [
-  { re: /no url found for submodule|fatal: .*submodule|git submodule/i, reason: 'Git submodule is misconfigured (no URL). Fix `.gitmodules`/submodule setup — not a code bug.' },
+  { re: /no url found for submodule|fatal:[^\n]*submodule|failed to (clone|fetch) submodule|error: pathspec .* submodule/i, reason: 'Git submodule is misconfigured (no URL). Fix `.gitmodules`/submodule setup — not a code bug.' },
   { re: /(missing|not set|undefined|empty).{0,30}(env|environment) var|environment variable .* (is )?(not set|missing|required)|process\.env\.\w+ is (undefined|not defined)/i, reason: 'A required environment variable / secret is missing in CI. Configure it in repo settings — not a code bug.' },
   { re: /\b(SUPABASE_URL|SUPABASE_ANON_KEY|API_KEY|SECRET|TOKEN|DATABASE_URL)\b.{0,30}(missing|not set|undefined|required|invalid)/i, reason: 'A required secret/credential is missing or invalid in CI. Add it as a repository/organization secret.' },
   { re: /no pnpm version is specified|specify it (via|in) .* "packageManager"|corepack/i, reason: 'Package-manager version is not pinned. Set `packageManager` in package.json or the workflow — not a code bug.' },
@@ -41,11 +41,24 @@ function stripTs(line) {
 
 function classifyActionability(logData) {
   const msg = (logData?.errorMessage || '').trim();
-  const hay = `${msg}\n${logData?.rawLog || ''}\n${logData?.stackTrace || ''}`;
+  const rootCause = (logData?.rootCause || '').trim();
+  const stack = (logData?.stackTrace || '').trim();
+  const rawLog = logData?.rawLog || '';
 
-  // 1) Infra/config failure → not a code bug. Check the most specific first.
+  // 1) Infra/config failure → not a code bug.
+  // Match the SPECIFIC extracted error (rootCause/errorMessage/stack) first. The
+  // full CI log is noisy — GitHub Actions' checkout step logs `git submodule
+  // foreach …` even when there are no submodules, so matching infra rules against
+  // the whole raw log mis-classifies (and mis-explains) real failures. Only fall
+  // back to the raw log when the focused error text matches nothing.
+  const focused = `${rootCause}\n${msg}\n${stack}`.trim();
   for (const rule of INFRA_RULES) {
-    if (rule.re.test(hay)) {
+    if (rule.re.test(focused)) {
+      return { actionable: false, klass: 'infra', reason: rule.reason };
+    }
+  }
+  for (const rule of INFRA_RULES) {
+    if (rule.re.test(rawLog)) {
       return { actionable: false, klass: 'infra', reason: rule.reason };
     }
   }

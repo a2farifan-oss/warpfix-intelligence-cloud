@@ -164,11 +164,7 @@ const nextConfig: NextConfig = {
         destination: "/dashboard",
         permanent: true,
       },
-      {
-        source: "/docs",
-        destination: "/#features",
-        permanent: false,
-      },
+
     ];
   },
   async rewrites() {

@@ -10,6 +10,7 @@ const { classifyError } = require('../agents/classifier');
 const { generateFingerprint } = require('../agents/fingerprint');
 const { lookupFingerprint, storeFingerprint } = require('../agents/fingerprintStore');
 const { generatePatch } = require('../agents/patchGenerator');
+const { isUnparseable, isPlaceholderPatch, patchAppliesToRepo } = require('../agents/patchGuards');
 const { validateInSandbox } = require('../agents/sandboxValidator');
 const { computeConfidence } = require('../agents/confidenceEngine');
 const { createPullRequest } = require('../agents/pullRequestAgent');
@@ -37,6 +38,16 @@ async function processRepairJob(job) {
       context,
     });
 
+    // Guard: if logs could not be parsed into a real error, abort. Repairing on
+    // an empty/sentinel error collapses every repo to one generic fingerprint and
+    // ships a cached placeholder patch — never open a PR in that case.
+    if (isUnparseable(logData)) {
+      logger.warn('Skipping repair: no usable error extracted from logs', {
+        jobId, repo: repository?.full_name, errorMessage: logData.errorMessage,
+      });
+      return { status: 'skipped', reason: 'unparseable_logs', pr_url: null };
+    }
+
     // Step 2: Classify error
     job.updateProgress(20);
     const classification = await classifyError(logData);
@@ -50,19 +61,45 @@ async function processRepairJob(job) {
     const existingFix = await lookupFingerprint(fingerprint.hash);
 
     let patch;
-    if (existingFix && existingFix.resolution_patch) {
+    let reusedFingerprint = false;
+    if (existingFix && existingFix.resolution_patch && !isPlaceholderPatch(existingFix.resolution_patch)
+        && await patchAppliesToRepo(existingFix.resolution_patch, repository, installation_id)) {
       logger.info('Fingerprint match found, reusing patch', { hash: fingerprint.hash });
       patch = existingFix.resolution_patch;
+      reusedFingerprint = true;
     } else {
-      // Step 5: Generate patch via LLM
+      // Step 5: Generate patch via LLM (also covers the case where a cached patch
+      // was a placeholder or targeted a different repo's files).
       job.updateProgress(50);
-      patch = await generatePatch({
-        logData,
-        classification,
-        repository,
-        context,
-        installation_id,
+      try {
+        patch = await generatePatch({
+          logData,
+          classification,
+          repository,
+          context,
+          installation_id,
+          workflow_run,
+        });
+      } catch (genErr) {
+        // A patch that fails the safety check (e.g. would touch .env / a test
+        // file) is non-retryable — regenerating won't help. Skip cleanly instead
+        // of throwing, which would burn the remaining BullMQ attempts (LLM calls).
+        if (genErr.code === 'PATCH_UNSAFE') {
+          logger.warn('Skipping repair: generated patch failed safety check', {
+            jobId, repo: repository?.full_name, reason: genErr.message,
+          });
+          return { status: 'skipped', reason: 'unsafe_patch', pr_url: null };
+        }
+        throw genErr;
+      }
+    }
+
+    // Guard: never ship a placeholder/empty patch (the prompt-example echo).
+    if (isPlaceholderPatch(patch)) {
+      logger.warn('Skipping repair: generated patch is empty/placeholder', {
+        jobId, repo: repository?.full_name, hash: fingerprint.hash,
       });
+      return { status: 'skipped', reason: 'placeholder_patch', pr_url: null };
     }
 
     // Step 6: Validate patch in sandbox
@@ -78,7 +115,7 @@ async function processRepairJob(job) {
     const confidence = computeConfidence({
       sandboxPassed: sandboxResult.passed,
       patchSize: patch.length,
-      fingerprintReuse: !!existingFix,
+      fingerprintReuse: reusedFingerprint,
       classification,
     });
 
@@ -130,6 +167,7 @@ async function processRepairJob(job) {
         classification,
         confidence,
         fingerprint,
+        workflow_run,
       });
       prUrl = prResult.url;
       prNumber = prResult.number;
@@ -214,6 +252,15 @@ async function processRepairJob(job) {
       duration_ms: duration,
     };
   } catch (err) {
+    // An exhausted per-day LLM budget won't recover within BullMQ's retry window,
+    // so rethrowing just burns the remaining attempts (re-running classify/patch
+    // for nothing). Skip cleanly; the next CI failure will repair once it resets.
+    if (err.code === 'LLM_DAILY_LIMIT') {
+      logger.warn('Skipping repair: LLM daily token limit reached', {
+        jobId, repo: repository?.full_name,
+      });
+      return { status: 'skipped', reason: 'llm_daily_limit', pr_url: null };
+    }
     logger.error('Repair job failed', { jobId, error: err.message, stack: err.stack });
     throw err;
   }

@@ -1103,6 +1103,7 @@ engines: 12`}
                 <li><Link href="/blog" className="hover:text-[var(--text-secondary)] transition-colors">Blog</Link></li>
                 <li><Link href="/changelog" className="hover:text-[var(--text-secondary)] transition-colors">Changelog</Link></li>
                 <li><Link href="/roadmap" className="hover:text-[var(--text-secondary)] transition-colors">Roadmap</Link></li>
+                <li><Link href="/tools" className="hover:text-[var(--text-secondary)] transition-colors">Free Tools</Link></li>
               </ul>
             </div>
             <div>

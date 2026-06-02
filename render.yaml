@@ -30,6 +30,14 @@ services:
         sync: false
       - key: GITHUB_CLIENT_SECRET
         sync: false
+      - key: LLM_PROVIDER
+        value: groq
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_API_URL
+        value: https://api.groq.com/openai/v1
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
       - key: PAGEGRID_API_KEY
         sync: false
       - key: PAGEGRID_API_URL
@@ -78,6 +86,14 @@ services:
           type: keyvalue
           name: warpfix-redis
           property: connectionString
+      - key: LLM_PROVIDER
+        value: groq
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_API_URL
+        value: https://api.groq.com/openai/v1
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
       - key: PAGEGRID_API_KEY
         sync: false
       - key: PAGEGRID_API_URL

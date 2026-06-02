@@ -19,6 +19,7 @@ export const metadata: Metadata = {
     description: "Everything you need to install, configure, and use WarpFix — the AI-powered CI auto-repair platform.",
     url: "https://warpfix.org/docs",
     siteName: "WarpFix",
+    type: "website",
   },
   alternates: {
     canonical: "https://warpfix.org/docs",

@@ -182,12 +182,14 @@ async function processReviewJob(job) {
     repoId = repoResult.rows[0]?.id;
     if (!repoId) {
       const insertRepo = await query(
-        `INSERT INTO repositories (github_id, full_name, owner, name, default_branch, installation_id)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         ON CONFLICT (github_id) DO UPDATE SET updated_at = NOW()
+        `INSERT INTO repositories (github_id, full_name, owner, name, default_branch, installation_id, user_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT (github_id) DO UPDATE SET
+           updated_at = NOW(),
+           user_id = COALESCE(repositories.user_id, EXCLUDED.user_id)
          RETURNING id`,
         [repository.id, repository.full_name, repository.owner, repository.name,
-         repository.default_branch, installation_id]
+         repository.default_branch, installation_id, user_id || null]
       );
       repoId = insertRepo.rows[0]?.id;
     }

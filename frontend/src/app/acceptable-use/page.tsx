@@ -6,6 +6,14 @@ export const metadata: Metadata = {
   title: "Acceptable Use Policy",
   description:
     "Review the acceptable use guidelines for the WarpFix platform.",
+  alternates: { canonical: "https://warpfix.org/acceptable-use" },
+  openGraph: {
+    title: "Acceptable Use Policy | WarpFix",
+    description: "Review the acceptable use guidelines for the WarpFix platform.",
+    url: "https://warpfix.org/acceptable-use",
+    siteName: "WarpFix",
+    type: "website",
+  },
 };
 
 export default function AcceptableUsePolicyPage() {

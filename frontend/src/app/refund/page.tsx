@@ -6,6 +6,14 @@ export const metadata: Metadata = {
   title: "Refund Policy",
   description:
     "WarpFix refund and cancellation policy. All sales are final — no refunds are issued for paid subscriptions.",
+  alternates: { canonical: "https://warpfix.org/refund" },
+  openGraph: {
+    title: "Refund Policy | WarpFix",
+    description: "WarpFix refund and cancellation policy. All sales are final — no refunds are issued for paid subscriptions.",
+    url: "https://warpfix.org/refund",
+    siteName: "WarpFix",
+    type: "website",
+  },
 };
 
 export default function RefundPolicyPage() {

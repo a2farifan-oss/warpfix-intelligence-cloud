@@ -6,6 +6,14 @@ export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
     "Learn how WarpFix collects, uses, and protects your personal information.",
+  alternates: { canonical: "https://warpfix.org/privacy" },
+  openGraph: {
+    title: "Privacy Policy | WarpFix",
+    description: "Learn how WarpFix collects, uses, and protects your personal information.",
+    url: "https://warpfix.org/privacy",
+    siteName: "WarpFix",
+    type: "website",
+  },
 };
 
 export default function PrivacyPolicyPage() {

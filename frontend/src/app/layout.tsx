@@ -368,20 +368,20 @@ function JsonLd() {
       {
         "@type": "ListItem",
         position: 2,
-        name: "Features",
-        item: `${BASE_URL}/#features`,
+        name: "Blog",
+        item: `${BASE_URL}/blog`,
       },
       {
         "@type": "ListItem",
         position: 3,
-        name: "Pricing",
-        item: `${BASE_URL}/#pricing`,
+        name: "Docs",
+        item: `${BASE_URL}/docs`,
       },
       {
         "@type": "ListItem",
         position: 4,
-        name: "FAQ",
-        item: `${BASE_URL}/#faq`,
+        name: "Changelog",
+        item: `${BASE_URL}/changelog`,
       },
     ],
   };

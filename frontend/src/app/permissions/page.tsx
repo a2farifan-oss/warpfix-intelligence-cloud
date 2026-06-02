@@ -5,6 +5,14 @@ import Image from "next/image";
 export const metadata: Metadata = {
   title: "Permissions",
   description: "Detailed explanation of every GitHub App permission WarpFix requests and why.",
+  alternates: { canonical: "https://warpfix.org/permissions" },
+  openGraph: {
+    title: "Permissions | WarpFix",
+    description: "Detailed explanation of every GitHub App permission WarpFix requests and why.",
+    url: "https://warpfix.org/permissions",
+    siteName: "WarpFix",
+    type: "website",
+  },
 };
 
 interface Permission {

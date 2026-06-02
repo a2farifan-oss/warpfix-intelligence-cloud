@@ -5,6 +5,14 @@ import Image from "next/image";
 export const metadata: Metadata = {
   title: "Changelog",
   description: "Recent updates, improvements, and new features shipped to the WarpFix platform.",
+  alternates: { canonical: "https://warpfix.org/changelog" },
+  openGraph: {
+    title: "Changelog | WarpFix",
+    description: "Recent updates, improvements, and new features shipped to the WarpFix platform.",
+    url: "https://warpfix.org/changelog",
+    siteName: "WarpFix",
+    type: "website",
+  },
 };
 
 const ENTRIES = [

@@ -6,6 +6,14 @@ export const metadata: Metadata = {
   title: "Cookie Policy",
   description:
     "Understand how WarpFix uses cookies and similar tracking technologies.",
+  alternates: { canonical: "https://warpfix.org/cookies" },
+  openGraph: {
+    title: "Cookie Policy | WarpFix",
+    description: "Understand how WarpFix uses cookies and similar tracking technologies.",
+    url: "https://warpfix.org/cookies",
+    siteName: "WarpFix",
+    type: "website",
+  },
 };
 
 export default function CookiePolicyPage() {

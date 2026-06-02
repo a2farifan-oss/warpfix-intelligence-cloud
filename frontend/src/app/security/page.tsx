@@ -6,6 +6,14 @@ export const metadata: Metadata = {
   title: "Security",
   description:
     "Learn about WarpFix security practices, data handling, LLM provider details, and our commitment to protecting your code.",
+  alternates: { canonical: "https://warpfix.org/security" },
+  openGraph: {
+    title: "Security & Data | WarpFix",
+    description: "Learn about WarpFix security practices, data handling, LLM provider details, and our commitment to protecting your code.",
+    url: "https://warpfix.org/security",
+    siteName: "WarpFix",
+    type: "website",
+  },
 };
 
 const DATA_FLOW_STEPS = [

@@ -6,6 +6,14 @@ export const metadata: Metadata = {
   title: "Terms of Service",
   description:
     "Read the terms and conditions governing your use of the WarpFix platform.",
+  alternates: { canonical: "https://warpfix.org/terms" },
+  openGraph: {
+    title: "Terms of Service | WarpFix",
+    description: "Read the terms and conditions governing your use of the WarpFix platform.",
+    url: "https://warpfix.org/terms",
+    siteName: "WarpFix",
+    type: "website",
+  },
 };
 
 export default function TermsOfServicePage() {

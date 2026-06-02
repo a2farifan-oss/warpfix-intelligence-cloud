@@ -5,6 +5,14 @@ import Image from "next/image";
 export const metadata: Metadata = {
   title: "Roadmap",
   description: "See what's live and what's coming next to the WarpFix platform.",
+  alternates: { canonical: "https://warpfix.org/roadmap" },
+  openGraph: {
+    title: "Roadmap | WarpFix",
+    description: "See what's live and what's coming next to the WarpFix platform.",
+    url: "https://warpfix.org/roadmap",
+    siteName: "WarpFix",
+    type: "website",
+  },
 };
 
 type Status = "live" | "coming-soon";

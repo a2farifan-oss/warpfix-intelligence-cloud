@@ -53,6 +53,25 @@ check('ECONNREFUSED network failure routes to infra', () => {
   assert.strictEqual(r.klass, 'infra');
 });
 
+check('env-var failure is NOT mis-attributed to submodule when CI log has "git submodule foreach" (regression)', () => {
+  // GitHub Actions checkout logs "git submodule foreach ..." even with submodules:false.
+  const rawLog = [
+    '2026-06-02T21:49:40Z /usr/bin/git submodule foreach --recursive git config --local',
+    '2026-06-02T21:49:45Z   throw new Error(\'SUPABASE_URL is not set\');',
+    '2026-06-02T21:49:45Z Error: SUPABASE_URL is not set',
+  ].join('\n');
+  const r = classifyActionability({ errorMessage: 'Error: SUPABASE_URL is not set', rootCause: 'SUPABASE_URL is not set', rawLog });
+  assert.strictEqual(r.actionable, false);
+  assert.ok(/secret|environment variable/i.test(r.reason), `wrong reason: ${r.reason}`);
+  assert.ok(!/submodule/i.test(r.reason), `mis-attributed to submodule: ${r.reason}`);
+});
+
+check('a genuine submodule failure still routes to infra (submodule reason)', () => {
+  const r = classifyActionability({ errorMessage: 'fatal: No url found for submodule path "vendor/x" in .gitmodules', rootCause: 'No url found for submodule path "vendor/x"' });
+  assert.strictEqual(r.klass, 'infra');
+  assert.ok(/submodule/i.test(r.reason));
+});
+
 check('a REAL test failure IS actionable', () => {
   const r = classifyActionability({ errorMessage: 'AssertionError: expected 4 but received 5', rawLog: '1 failing' });
   assert.strictEqual(r.actionable, true);

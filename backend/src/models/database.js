@@ -356,6 +356,12 @@ async function runMigrations() {
         ALTER TABLE users ADD COLUMN IF NOT EXISTS cli_api_key VARCHAR(255);
         ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_expires_at TIMESTAMPTZ;
         ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS duration_days INTEGER;
+        -- Honest metrics: whether the sandbox pass was a REAL test run, and the
+        -- real customer outcome (merged vs closed) so the dashboard can report
+        -- acceptance rate instead of the internal sandbox pass rate.
+        ALTER TABLE repairs ADD COLUMN IF NOT EXISTS sandbox_verified BOOLEAN DEFAULT FALSE;
+        ALTER TABLE repairs ADD COLUMN IF NOT EXISTS pr_state VARCHAR(20);
+        ALTER TABLE repairs ADD COLUMN IF NOT EXISTS accepted BOOLEAN;
       EXCEPTION WHEN OTHERS THEN NULL;
       END $$;
     `);

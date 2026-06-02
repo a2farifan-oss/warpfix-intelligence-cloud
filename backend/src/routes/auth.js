@@ -29,7 +29,13 @@ router.get('/github/callback', (req, res, next) => {
         );
       }
       logger.info('OAuth login successful', { userId: user.id, username: user.username });
-      res.redirect(`${process.env.APP_BASE_URL || 'http://localhost:3000'}/dashboard`);
+      const appBase = process.env.APP_BASE_URL || 'http://localhost:3000';
+      let postLogin = req.session.postLoginRedirect;
+      delete req.session.postLoginRedirect;
+      if (typeof postLogin !== 'string' || !postLogin.startsWith('/') || postLogin.startsWith('//')) {
+        postLogin = '/dashboard';
+      }
+      res.redirect(`${appBase}${postLogin}`);
     });
   })(req, res, next);
 });
@@ -46,10 +52,13 @@ router.get('/github/setup', async (req, res) => {
   const installationId = req.query.installation_id;
 
   try {
-    // Not logged in: send through normal login; the webhook still links the
-    // install by its sender, so repos resolve once they authenticate.
+    // Not logged in: start GitHub OAuth on this API host (the frontend has no
+    // /login route — login is initiated via /auth/github). Remember where to
+    // land so repos show right after authenticating; the webhook links the
+    // install by its sender in the meantime.
     if (!req.user) {
-      return res.redirect(`${appBase}/login?next=${encodeURIComponent('/dashboard/repositories?installed=1')}`);
+      req.session.postLoginRedirect = '/dashboard/repositories?installed=1';
+      return res.redirect('/auth/github');
     }
     if (!installationId) {
       return res.redirect(dest);

@@ -4,8 +4,7 @@ const { logger } = require('../utils/logger');
 const { enqueueRepairJob, enqueueReviewJob, enqueueChatJob } = require('../queue/producer');
 const { query } = require('../models/database');
 const { captureOrgPreference, detectPreferenceFromPREdit } = require('../agents/intelligenceGrowth');
-const { resolveUserIdForInstallation } = require('../services/installations');
-const { PLANS } = require('./billing');
+const { resolveUserIdForInstallation, saveInstallationRepos } = require('../services/installations');
 const router = express.Router();
 
 function verifyGitHubSignature(req, res, next) {
@@ -39,46 +38,6 @@ function verifyGitHubSignature(req, res, next) {
   }
 
   next();
-}
-
-// Persist the repositories carried by an installation / installation_repositories
-// webhook, honoring the owner's plan limit. Returns the number of repos saved.
-async function saveInstallationRepos({ installationId, userId, repos }) {
-  if (!repos || !repos.length) return 0;
-
-  let userPlan = 'free';
-  if (userId) {
-    const u = await query('SELECT plan FROM users WHERE id = $1', [userId]);
-    userPlan = u.rows[0]?.plan || 'free';
-  }
-  const maxRepos = PLANS[userPlan]?.max_repos ?? 1;
-
-  let saved = 0;
-  for (const repo of repos) {
-    if (maxRepos !== -1 && userId) {
-      const curCount = await query(
-        'SELECT COUNT(*) AS cnt FROM repositories WHERE user_id = $1',
-        [userId]
-      );
-      if (parseInt(curCount.rows[0].cnt) >= maxRepos) {
-        logger.info('Repo limit reached during install', { plan: userPlan, max: maxRepos });
-        break;
-      }
-    }
-    await query(
-      `INSERT INTO repositories (github_id, full_name, owner, name, default_branch, installation_id, user_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       ON CONFLICT (github_id) DO UPDATE SET
-         full_name = EXCLUDED.full_name,
-         user_id = COALESCE(repositories.user_id, EXCLUDED.user_id),
-         installation_id = EXCLUDED.installation_id,
-         updated_at = NOW()`,
-      [repo.id, repo.full_name, repo.full_name.split('/')[0], repo.name,
-       'main', String(installationId), userId]
-    );
-    saved++;
-  }
-  return saved;
 }
 
 router.post('/github', verifyGitHubSignature, async (req, res) => {

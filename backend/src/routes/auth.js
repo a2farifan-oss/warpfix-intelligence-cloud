@@ -1,6 +1,8 @@
 const express = require('express');
 const passport = require('passport');
 const { logger } = require('../utils/logger');
+const { query } = require('../models/database');
+const { resolveUserIdForInstallation, syncInstallationRepos } = require('../services/installations');
 const router = express.Router();
 
 router.get('/github', passport.authenticate('github', { scope: ['repo'] }));
@@ -30,6 +32,86 @@ router.get('/github/callback', (req, res, next) => {
       res.redirect(`${process.env.APP_BASE_URL || 'http://localhost:3000'}/dashboard`);
     });
   })(req, res, next);
+});
+
+// GitHub App "Setup URL" callback. GitHub redirects the installing user here
+// after install/reconfigure with ?installation_id=...&setup_action=... Because
+// the user arrives authenticated (same browser session), we link the install
+// to them and sync repos immediately — so org/enterprise installs show repos
+// without the user having to click "Sync Repos". The repo sync uses app
+// (installation) auth, so it works even when org SSO blocks the user's token.
+router.get('/github/setup', async (req, res) => {
+  const appBase = process.env.APP_BASE_URL || 'http://localhost:3000';
+  const dest = `${appBase}/dashboard/repositories?installed=1`;
+  const installationId = req.query.installation_id;
+
+  try {
+    // Not logged in: send through normal login; the webhook still links the
+    // install by its sender, so repos resolve once they authenticate.
+    if (!req.user) {
+      return res.redirect(`${appBase}/login?next=${encodeURIComponent('/dashboard/repositories?installed=1')}`);
+    }
+    if (!installationId) {
+      return res.redirect(dest);
+    }
+
+    // Authoritative ownership comes from the webhook sender (set on the
+    // installations row). Only act when this install resolves to *this* user.
+    let ownerId = await resolveUserIdForInstallation(installationId);
+
+    // Webhook may not have arrived yet. Fall back to verifying via the user's
+    // own OAuth token, then claim the (still-unlinked) install for them.
+    if (!ownerId && req.user.access_token) {
+      try {
+        const resp = await fetch(
+          'https://api.github.com/user/installations?per_page=100',
+          {
+            headers: {
+              Authorization: `token ${req.user.access_token}`,
+              Accept: 'application/vnd.github+json',
+            },
+          }
+        );
+        if (resp.ok) {
+          const body = await resp.json();
+          const match = (body.installations || []).find(
+            (i) => Number(i.id) === Number(installationId)
+          );
+          if (match) {
+            await query(
+              `INSERT INTO installations (installation_id, account_login, account_type, target_type, installer_github_id, installer_login)
+               VALUES ($1, $2, $3, $4, $5, $6)
+               ON CONFLICT (installation_id) DO UPDATE SET
+                 installer_github_id = COALESCE(installations.installer_github_id, EXCLUDED.installer_github_id),
+                 installer_login = COALESCE(installations.installer_login, EXCLUDED.installer_login),
+                 updated_at = NOW()`,
+              [match.id, match.account?.login || req.user.username,
+               match.account?.type || 'User', match.target_type || null,
+               req.user.github_id, req.user.username]
+            );
+            ownerId = req.user.id;
+          }
+        }
+      } catch (verifyErr) {
+        logger.warn('Setup: /user/installations verification failed', { error: verifyErr.message });
+      }
+    }
+
+    if (ownerId === req.user.id) {
+      const synced = await syncInstallationRepos({ installationId, userId: ownerId });
+      logger.info('Setup callback synced installation', { installationId, userId: ownerId, synced });
+    } else {
+      // Either unresolved (webhook will link by sender shortly) or owned by a
+      // different user — never link someone else's install from a query param.
+      logger.info('Setup callback: install not linked to current user yet', {
+        installationId, ownerId, userId: req.user.id,
+      });
+    }
+  } catch (err) {
+    logger.error('Setup callback error', { error: err.message });
+  }
+
+  return res.redirect(dest);
 });
 
 router.get('/me', (req, res) => {

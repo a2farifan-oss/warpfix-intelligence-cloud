@@ -14,7 +14,9 @@ router.get('/', requireAuth, async (req, res) => {
           OR r.repository_id IN (
             SELECT rp.id FROM repositories rp
             JOIN installations i ON i.installation_id::text = rp.installation_id
-            JOIN users u ON u.username = i.account_login
+            JOIN users u ON u.github_id = i.installer_github_id
+                         OR u.username = i.installer_login
+                         OR u.username = i.account_login
             WHERE u.id = $1
           )
        ORDER BY r.created_at DESC
@@ -39,7 +41,9 @@ router.get('/:id', requireAuth, async (req, res) => {
        WHERE r.id = $1 AND (r.user_id = $2 OR r.repository_id IN (
             SELECT rp.id FROM repositories rp
             JOIN installations i ON i.installation_id::text = rp.installation_id
-            JOIN users u ON u.username = i.account_login
+            JOIN users u ON u.github_id = i.installer_github_id
+                         OR u.username = i.installer_login
+                         OR u.username = i.account_login
             WHERE u.id = $2
           ))`,
       [req.params.id, req.user.id]

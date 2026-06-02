@@ -71,6 +71,8 @@ async function runMigrations() {
       account_login VARCHAR(255) NOT NULL,
       account_type VARCHAR(50) NOT NULL,
       target_type VARCHAR(50),
+      installer_github_id INTEGER,
+      installer_login VARCHAR(255),
       permissions JSONB,
       events JSONB,
       created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -349,6 +351,8 @@ async function runMigrations() {
       DO $$ BEGIN
         ALTER TABLE repositories ADD COLUMN IF NOT EXISTS installation_id VARCHAR(255);
         ALTER TABLE repositories ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+        ALTER TABLE installations ADD COLUMN IF NOT EXISTS installer_github_id INTEGER;
+        ALTER TABLE installations ADD COLUMN IF NOT EXISTS installer_login VARCHAR(255);
         ALTER TABLE users ADD COLUMN IF NOT EXISTS cli_api_key VARCHAR(255);
         ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_expires_at TIMESTAMPTZ;
         ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS duration_days INTEGER;

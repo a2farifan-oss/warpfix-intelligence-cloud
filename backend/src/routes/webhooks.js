@@ -4,6 +4,7 @@ const { logger } = require('../utils/logger');
 const { enqueueRepairJob, enqueueReviewJob, enqueueChatJob } = require('../queue/producer');
 const { query } = require('../models/database');
 const { captureOrgPreference, detectPreferenceFromPREdit } = require('../agents/intelligenceGrowth');
+const { resolveUserIdForInstallation } = require('../services/installations');
 const { PLANS } = require('./billing');
 const router = express.Router();
 
@@ -40,6 +41,46 @@ function verifyGitHubSignature(req, res, next) {
   next();
 }
 
+// Persist the repositories carried by an installation / installation_repositories
+// webhook, honoring the owner's plan limit. Returns the number of repos saved.
+async function saveInstallationRepos({ installationId, userId, repos }) {
+  if (!repos || !repos.length) return 0;
+
+  let userPlan = 'free';
+  if (userId) {
+    const u = await query('SELECT plan FROM users WHERE id = $1', [userId]);
+    userPlan = u.rows[0]?.plan || 'free';
+  }
+  const maxRepos = PLANS[userPlan]?.max_repos ?? 1;
+
+  let saved = 0;
+  for (const repo of repos) {
+    if (maxRepos !== -1 && userId) {
+      const curCount = await query(
+        'SELECT COUNT(*) AS cnt FROM repositories WHERE user_id = $1',
+        [userId]
+      );
+      if (parseInt(curCount.rows[0].cnt) >= maxRepos) {
+        logger.info('Repo limit reached during install', { plan: userPlan, max: maxRepos });
+        break;
+      }
+    }
+    await query(
+      `INSERT INTO repositories (github_id, full_name, owner, name, default_branch, installation_id, user_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (github_id) DO UPDATE SET
+         full_name = EXCLUDED.full_name,
+         user_id = COALESCE(repositories.user_id, EXCLUDED.user_id),
+         installation_id = EXCLUDED.installation_id,
+         updated_at = NOW()`,
+      [repo.id, repo.full_name, repo.full_name.split('/')[0], repo.name,
+       'main', String(installationId), userId]
+    );
+    saved++;
+  }
+  return saved;
+}
+
 router.post('/github', verifyGitHubSignature, async (req, res) => {
   const event = req.headers['x-github-event'];
   const payload = req.body;
@@ -69,17 +110,8 @@ router.post('/github', verifyGitHubSignature, async (req, res) => {
           });
 
           // Look up user_id from installation
-          let userId = null;
           const installId = payload.installation?.id;
-          if (installId) {
-            const instResult = await query(
-              `SELECT u.id FROM installations i
-               JOIN users u ON u.username = i.account_login
-               WHERE i.installation_id = $1`,
-              [installId]
-            );
-            userId = instResult.rows[0]?.id || null;
-          }
+          const userId = await resolveUserIdForInstallation(installId);
 
           await enqueueRepairJob({
             type: 'ci_failure',
@@ -108,56 +140,54 @@ router.post('/github', verifyGitHubSignature, async (req, res) => {
       case 'installation': {
         if (payload.action === 'created') {
           const inst = payload.installation;
+          // `sender` is the GitHub user who performed the install. For org
+          // installs this differs from `account.login` (the org), so we record
+          // it explicitly to link the installation back to the WarpFix account.
+          const sender = payload.sender || {};
           await query(
-            `INSERT INTO installations (installation_id, account_login, account_type, target_type, permissions, events)
-             VALUES ($1, $2, $3, $4, $5, $6)
+            `INSERT INTO installations (installation_id, account_login, account_type, target_type, installer_github_id, installer_login, permissions, events)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
              ON CONFLICT (installation_id) DO UPDATE SET
+               installer_github_id = COALESCE(installations.installer_github_id, EXCLUDED.installer_github_id),
+               installer_login = COALESCE(installations.installer_login, EXCLUDED.installer_login),
                permissions = EXCLUDED.permissions,
                events = EXCLUDED.events,
                updated_at = NOW()`,
             [inst.id, inst.account.login, inst.account.type, inst.target_type,
+             sender.id || null, sender.login || null,
              JSON.stringify(inst.permissions), JSON.stringify(inst.events)]
           );
-          logger.info('Installation created', { id: inst.id, account: inst.account.login });
+          logger.info('Installation created', { id: inst.id, account: inst.account.login, installer: sender.login });
 
-          // Auto-save repos from the installation payload
-          if (payload.repositories && payload.repositories.length > 0) {
-            const userResult = await query(
-              'SELECT id, plan FROM users WHERE username = $1',
-              [inst.account.login]
-            );
-            const userId = userResult.rows[0]?.id || null;
-            const userPlan = userResult.rows[0]?.plan || 'free';
-            const maxRepos = PLANS[userPlan]?.max_repos ?? 1;
+          // Auto-save repos from the installation payload, linked to the
+          // WarpFix user who installed the app (resolves org installs correctly).
+          const userId = await resolveUserIdForInstallation(inst.id);
+          const saved = await saveInstallationRepos({
+            installationId: inst.id,
+            userId,
+            repos: payload.repositories,
+          });
+          logger.info('Saved repos from installation', {
+            saved, total: (payload.repositories || []).length, account: inst.account.login, userId,
+          });
+        }
+        break;
+      }
 
-            let saved = 0;
-            for (const repo of payload.repositories) {
-              // Enforce max_repos limit
-              if (maxRepos !== -1 && userId) {
-                const curCount = await query(
-                  'SELECT COUNT(*) AS cnt FROM repositories WHERE user_id = $1',
-                  [userId]
-                );
-                if (parseInt(curCount.rows[0].cnt) >= maxRepos) {
-                  logger.info('Repo limit reached during install', { plan: userPlan, max: maxRepos, account: inst.account.login });
-                  break;
-                }
-              }
-              await query(
-                `INSERT INTO repositories (github_id, full_name, owner, name, default_branch, installation_id, user_id)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7)
-                 ON CONFLICT (github_id) DO UPDATE SET
-                   full_name = EXCLUDED.full_name,
-                   user_id = COALESCE(repositories.user_id, EXCLUDED.user_id),
-                   installation_id = EXCLUDED.installation_id,
-                   updated_at = NOW()`,
-                [repo.id, repo.full_name, repo.full_name.split('/')[0], repo.name,
-                 'main', String(inst.id), userId]
-              );
-              saved++;
-            }
-            logger.info('Saved repos from installation', { saved, total: payload.repositories.length, account: inst.account.login });
-          }
+      case 'installation_repositories': {
+        // Fired when a user adds repos to an existing installation (the most
+        // common path for "Only select repositories" installs).
+        if (payload.action === 'added') {
+          const inst = payload.installation;
+          const userId = await resolveUserIdForInstallation(inst.id);
+          const saved = await saveInstallationRepos({
+            installationId: inst.id,
+            userId,
+            repos: payload.repositories_added,
+          });
+          logger.info('Saved repos added to installation', {
+            saved, total: (payload.repositories_added || []).length, account: inst.account?.login, userId,
+          });
         }
         break;
       }
@@ -173,14 +203,7 @@ router.post('/github', verifyGitHubSignature, async (req, res) => {
             repo: repo.full_name, pr: pr.number,
           });
 
-          let userId = null;
-          if (installId) {
-            const instResult = await query(
-              `SELECT u.id FROM installations i JOIN users u ON u.username = i.account_login WHERE i.installation_id = $1`,
-              [installId]
-            );
-            userId = instResult.rows[0]?.id || null;
-          }
+          const userId = await resolveUserIdForInstallation(installId);
 
           if (userId) {
             const repair = await query(
@@ -218,16 +241,7 @@ router.post('/github', verifyGitHubSignature, async (req, res) => {
           });
 
           // Look up user_id
-          let userId = null;
-          if (installId) {
-            const instResult = await query(
-              `SELECT u.id FROM installations i
-               JOIN users u ON u.username = i.account_login
-               WHERE i.installation_id = $1`,
-              [installId]
-            );
-            userId = instResult.rows[0]?.id || null;
-          }
+          const userId = await resolveUserIdForInstallation(installId);
 
           await enqueueReviewJob({
             type: 'pr_review',

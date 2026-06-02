@@ -24,6 +24,31 @@ const MAX_BLOCK_CHARS = 6000;     // total injected section
 
 let _kb = null;
 
+// Learned fixes (from real merged PRs) are loaded from the DB and cached, then
+// merged into the candidate pool. The DB read is async and best-effort; we
+// refresh in the background so getFewShotBlock() stays synchronous and never
+// blocks or throws on a DB hiccup.
+let _learned = [];
+let _learnedAt = 0;
+const LEARNED_TTL_MS = parseInt(process.env.WARPFIX_LEARNED_TTL_MS, 10) || 5 * 60 * 1000;
+let _refreshing = false;
+
+function maybeRefreshLearned() {
+  if (String(process.env.WARPFIX_LEARN || '').toLowerCase() === 'off') return;
+  if (_refreshing || Date.now() - _learnedAt < LEARNED_TTL_MS) return;
+  _refreshing = true;
+  // Fire-and-forget: lazy require avoids a circular dep at module load.
+  Promise.resolve()
+    .then(() => require('./learnedFixes').loadRecentLearnedFixes())
+    .then((rows) => {
+      _learned = (rows || []).map((e) => ({ ...e, _tok: tokenize(`${e.errorMessage} ${e.description}`) }));
+      _learnedAt = Date.now();
+      if (_learned.length) logger.info('Retrieval learned-fixes refreshed', { count: _learned.length });
+    })
+    .catch((err) => logger.debug('Learned-fixes refresh failed', { error: err.message }))
+    .finally(() => { _refreshing = false; });
+}
+
 function tokenize(s) {
   return new Set((s || '').toLowerCase().match(/[a-z0-9_]+/g) || []);
 }
@@ -48,12 +73,20 @@ function loadKB() {
 }
 
 function retrieve(query, k = DEFAULT_K) {
-  const kb = loadKB();
-  if (kb.length === 0) return [];
+  maybeRefreshLearned();
+  // Real merged-PR fixes are the strongest signal, so include them alongside
+  // the seed KB. A small bonus biases ties toward learned (proven) examples.
+  const pool = loadKB().concat(_learned);
+  if (pool.length === 0) return [];
   const qt = tokenize(`${query.errorMessage || ''} ${query.description || ''}`);
   if (qt.size === 0) return [];
-  return kb
-    .map((e) => ({ e, s: jaccard(qt, e._tok) + (query.category && query.category === e.category ? 0.2 : 0) }))
+  return pool
+    .map((e) => ({
+      e,
+      s: jaccard(qt, e._tok)
+        + (query.category && query.category === e.category ? 0.2 : 0)
+        + (e._source === 'learned' ? 0.05 : 0),
+    }))
     .filter((x) => x.s >= MIN_SCORE)
     .sort((a, b) => b.s - a.s)
     .slice(0, k)

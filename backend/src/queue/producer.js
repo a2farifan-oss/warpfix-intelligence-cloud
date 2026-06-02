@@ -3,6 +3,29 @@ const { createRedisConnection } = require('./redis');
 const { logger } = require('../utils/logger');
 const { v4: uuidv4 } = require('uuid');
 
+// Derive a STABLE job id from the event so GitHub webhook redeliveries (which
+// happen on any slow/non-2xx response) collapse to a single job instead of
+// spawning a fresh repair each time. BullMQ ignores an add() whose jobId is
+// already queued/active or still retained in removeOnComplete/Fail — so this is
+// the idempotency key GitHub's own webhook best-practices recommend. We fall
+// back to a random id when the identifying fields are missing.
+function repairJobId(data) {
+  if (data && data.type === 'ci_failure' && data.repository?.id && data.workflow_run?.id) {
+    return `repair-${data.repository.id}-${data.workflow_run.id}`;
+  }
+  return uuidv4();
+}
+
+function reviewJobId(data) {
+  const pr = data?.pull_request;
+  // Include head_sha so a genuine new push (synchronize) re-reviews, but a
+  // duplicate delivery of the same push does not.
+  if (data?.repository?.id && pr?.number && pr?.head_sha) {
+    return `review-${data.repository.id}-${pr.number}-${pr.head_sha}`;
+  }
+  return uuidv4();
+}
+
 let repairQueue = null;
 let reviewQueue = null;
 let chatQueue = null;
@@ -68,7 +91,7 @@ function getChatQueue() {
 }
 
 async function enqueueRepairJob(data) {
-  const jobId = uuidv4();
+  const jobId = repairJobId(data);
   const queue = getRepairQueue();
 
   if (!queue) {
@@ -86,7 +109,7 @@ async function enqueueRepairJob(data) {
 }
 
 async function enqueueReviewJob(data) {
-  const jobId = uuidv4();
+  const jobId = reviewJobId(data);
   const queue = getReviewQueue();
 
   if (!queue) {
@@ -128,4 +151,6 @@ module.exports = {
   getRepairQueue,
   getReviewQueue,
   getChatQueue,
+  repairJobId,
+  reviewJobId,
 };

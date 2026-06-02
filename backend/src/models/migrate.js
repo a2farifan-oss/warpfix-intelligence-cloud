@@ -96,6 +96,18 @@ CREATE TABLE IF NOT EXISTS repairs (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Feedback loop: merged WarpFix fixes captured as verified (error -> fix) pairs
+-- that retrieval reads alongside the shipped KB so the product learns over time.
+CREATE TABLE IF NOT EXISTS learned_fixes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  repository_id UUID REFERENCES repositories(id) ON DELETE SET NULL,
+  category VARCHAR(100),
+  error_message TEXT NOT NULL,
+  fix_json JSONB NOT NULL,
+  pr_number INTEGER,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Subscriptions table
 CREATE TABLE IF NOT EXISTS subscriptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

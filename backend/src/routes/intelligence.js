@@ -10,7 +10,10 @@ async function getUserRepoIds(userId) {
   const result = await query(
     `SELECT DISTINCT rp.id FROM repositories rp
      LEFT JOIN installations i ON i.installation_id::text = rp.installation_id
-     LEFT JOIN users u ON u.username = i.account_login
+     LEFT JOIN users u
+       ON u.github_id = i.installer_github_id
+       OR u.username  = i.installer_login
+       OR u.username  = i.account_login
      WHERE rp.user_id = $1 OR u.id = $1`,
     [userId]
   );

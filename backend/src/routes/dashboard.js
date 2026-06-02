@@ -9,7 +9,10 @@ async function getUserRepoIds(userId) {
   const result = await query(
     `SELECT DISTINCT rp.id FROM repositories rp
      LEFT JOIN installations i ON i.installation_id::text = rp.installation_id
-     LEFT JOIN users u ON u.username = i.account_login
+     LEFT JOIN users u
+       ON u.github_id = i.installer_github_id
+       OR u.username  = i.installer_login
+       OR u.username  = i.account_login
      WHERE rp.user_id = $1 OR u.id = $1`,
     [userId]
   );
@@ -199,12 +202,58 @@ router.post('/repositories/sync', requireAuth, async (req, res) => {
       }
     }
 
-    // Find installations for this user
+    // Find installations for this user. Match by the GitHub account that
+    // installed the app (preferred) or, for personal installs, the account the
+    // app sits on. Matching only on account_login broke org installs because
+    // the org name never equals the user's personal username.
+    const githubId = req.user.github_id;
     const instResult = await query(
-      `SELECT installation_id FROM installations WHERE account_login = $1`,
-      [username]
+      `SELECT installation_id FROM installations
+        WHERE installer_github_id = $1
+           OR installer_login = $2
+           OR account_login = $2`,
+      [githubId, username]
     );
-    if (!instResult.rows.length) {
+    const installationIds = new Set(instResult.rows.map((r) => Number(r.installation_id)));
+
+    // Backfill: ask GitHub which installations this user can access using their
+    // own OAuth token. This securely links pre-existing org installs whose
+    // installer was never recorded (the root cause of "no repositories
+    // connected" for team accounts). Best-effort — degrades gracefully.
+    if (req.user.access_token) {
+      try {
+        const resp = await fetch(
+          'https://api.github.com/user/installations?per_page=100',
+          {
+            headers: {
+              Authorization: `token ${req.user.access_token}`,
+              Accept: 'application/vnd.github+json',
+            },
+          }
+        );
+        if (resp.ok) {
+          const body = await resp.json();
+          for (const inst of (body.installations || [])) {
+            installationIds.add(Number(inst.id));
+            // Claim the installation for this user if it is currently unlinked.
+            await query(
+              `INSERT INTO installations (installation_id, account_login, account_type, target_type, installer_github_id, installer_login)
+               VALUES ($1, $2, $3, $4, $5, $6)
+               ON CONFLICT (installation_id) DO UPDATE SET
+                 installer_github_id = COALESCE(installations.installer_github_id, EXCLUDED.installer_github_id),
+                 installer_login = COALESCE(installations.installer_login, EXCLUDED.installer_login),
+                 updated_at = NOW()`,
+              [inst.id, inst.account?.login || username, inst.account?.type || 'User',
+               inst.target_type || null, githubId, username]
+            );
+          }
+        }
+      } catch (discoverErr) {
+        // Token may not support /user/installations — fall back to DB matches.
+      }
+    }
+
+    if (!installationIds.size) {
       return res.json({ synced: 0, repositories: [] });
     }
 
@@ -222,12 +271,12 @@ router.post('/repositories/sync', requireAuth, async (req, res) => {
     }
 
     let totalSynced = 0;
-    for (const inst of instResult.rows) {
+    for (const installationId of installationIds) {
       try {
         const auth = createAppAuth({ appId, privateKey });
         const installationAuth = await auth({
           type: 'installation',
-          installationId: Number(inst.installation_id),
+          installationId,
         });
 
         const response = await fetch(
@@ -263,7 +312,7 @@ router.post('/repositories/sync', requireAuth, async (req, res) => {
                updated_at = NOW()`,
             [repo.id, repo.full_name, repo.owner.login, repo.name,
              repo.default_branch || 'main', repo.language,
-             String(inst.installation_id), userId]
+             String(installationId), userId]
           );
           totalSynced++;
         }

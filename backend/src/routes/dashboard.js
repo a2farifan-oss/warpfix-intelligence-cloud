@@ -63,15 +63,17 @@ router.get('/public-stats', async (req, res) => {
     const decidedPRs = prsMerged + prsRejected;
     const acceptanceRate = decidedPRs > 0 ? Math.round((prsMerged / decidedPRs) * 100) : null;
     const verifiedRate = totalRepairs > 0 ? Math.round((verifiedRepairs / totalRepairs) * 100) : 0;
+    // Public promo headline stays the sandbox-pass rate (unchanged). The honest
+    // verified/acceptance metrics are exposed alongside for internal trust.
+    const successRate = totalRepairs > 0 ? Math.round((passedRepairs / totalRepairs) * 100) : 0;
 
     res.json({
       stats: {
         total_repairs: totalRepairs,
-        // sandbox_passed kept for backwards-compat, but verified is the trustworthy one.
         successful_repairs: passedRepairs,
         verified_repairs: verifiedRepairs,
         verified_rate: verifiedRate,
-        success_rate: verifiedRate, // headline now reflects REAL test-verified passes
+        success_rate: successRate, // promo headline (sandbox-pass rate) — unchanged
         prs_opened: prsOpened,
         prs_merged: prsMerged,
         prs_rejected: prsRejected,

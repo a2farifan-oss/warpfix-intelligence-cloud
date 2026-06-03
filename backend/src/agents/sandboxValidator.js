@@ -177,11 +177,31 @@ async function runProjectTests(dir, steps) {
 
   // ---- Python ----
   if (has('pytest.ini') || has('pyproject.toml') || has('setup.py') || has('requirements.txt') || has('tox.ini')) {
+    // Debian's system Python is PEP-668 "externally-managed", so a bare
+    // `pip install` fails with `error: externally-managed-environment` and
+    // pytest never lands — which made EVERY Python repair false-fail the
+    // sandbox with "No module named pytest" (passed:false) regardless of how
+    // correct the patch was. Use a throwaway venv (pip is unrestricted inside
+    // one) and run install + pytest with that SAME interpreter so the deps we
+    // install are the ones pytest can import.
+    const venvDir = path.join(dir, '.warpfix-venv');
+    const venvPy = path.join(venvDir, 'bin', 'python');
+    await run('python3', ['-m', 'venv', venvDir], { cwd: dir, timeout: 120000 });
+    const usePy = fs.existsSync(venvPy) ? venvPy : 'python';
+    // If venv creation somehow failed we fall back to system python, where PEP
+    // 668 still applies — so pass --break-system-packages there only.
+    const breakFlag = usePy === 'python' ? ['--break-system-packages'] : [];
     if (has('requirements.txt')) {
-      const pip = await run('pip', ['install', '-r', 'requirements.txt', '-q'], { cwd: dir, timeout: 240000 });
+      const pip = await run(usePy, ['-m', 'pip', 'install', '-r', 'requirements.txt', '-q', ...breakFlag], { cwd: dir, timeout: 240000 });
       if (toolchainMissing(pip)) return null;
     }
-    const test = await run('python', ['-m', 'pytest', '-q'], { cwd: dir, timeout: 180000 });
+    // Repos often assume the CI image ships pytest rather than listing it as a
+    // dep, so ensure it's importable by the interpreter we'll run tests with.
+    const havePytest = await run(usePy, ['-m', 'pytest', '--version'], { cwd: dir, timeout: 30000 });
+    if (havePytest.code !== 0) {
+      await run(usePy, ['-m', 'pip', 'install', 'pytest', '-q', ...breakFlag], { cwd: dir, timeout: 180000 });
+    }
+    const test = await run(usePy, ['-m', 'pytest', '-q'], { cwd: dir, timeout: 180000 });
     if (toolchainMissing(test)) return null;
     // pytest exit 5 = "no tests collected" → not a real validation, fall back.
     if (test.code === 5) return null;

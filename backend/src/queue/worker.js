@@ -136,12 +136,19 @@ async function processRepairJob(job) {
     const reuseMinConfidence = parseInt(process.env.FINGERPRINT_REUSE_MIN_CONFIDENCE, 10) || 50;
     let patch;
     let reusedFingerprint = false;
+    let sandboxResult;
     if (existingFix && existingFix.resolution_patch && !isPlaceholderPatch(existingFix.resolution_patch)
         && (existingFix.resolution_confidence || 0) >= reuseMinConfidence
         && await patchAppliesToRepo(existingFix.resolution_patch, repository, installation_id)) {
       logger.info('Fingerprint match found, reusing patch', { hash: fingerprint.hash, confidence: existingFix.resolution_confidence });
       patch = existingFix.resolution_patch;
       reusedFingerprint = true;
+
+      // Step 6: Validate the reused patch in sandbox.
+      job.updateProgress(70);
+      sandboxResult = await validateInSandbox({
+        patch, repository, installation_id, workflow_run,
+      });
     } else {
       // Guard: per-repo daily LLM-repair backstop. Dedup only stops IDENTICAL
       // failures; a repo emitting many DISTINCT failures could still drive a
@@ -158,29 +165,74 @@ async function processRepairJob(job) {
         }
       }
 
-      // Step 5: Generate patch via LLM (also covers the case where a cached patch
-      // was a placeholder or targeted a different repo's files).
-      job.updateProgress(50);
-      try {
-        patch = await generatePatch({
-          logData,
-          classification,
-          repository,
-          context,
-          installation_id,
-          workflow_run,
-        });
-      } catch (genErr) {
-        // A patch that fails the safety check (e.g. would touch .env / a test
-        // file) is non-retryable — regenerating won't help. Skip cleanly instead
-        // of throwing, which would burn the remaining BullMQ attempts (LLM calls).
-        if (genErr.code === 'PATCH_UNSAFE') {
-          logger.warn('Skipping repair: generated patch failed safety check', {
-            jobId, repo: repository?.full_name, reason: genErr.message,
+      // Step 5+6: Generate a patch, then verify it in the sandbox. The sandbox
+      // is the source of truth: if a provider's patch FAILS a real (verified)
+      // sandbox run, we regenerate with a DIFFERENT provider rather than give
+      // up. This is what makes repairs reliable when the first model that
+      // answers (e.g. a fast but lower-quality one) returns a wrong fix while
+      // another model in the chain would produce a passing one. We only retry on
+      // a *verified* failure (an unverified/lightweight check can't distinguish
+      // a good patch from a bad one, so retrying it would just burn quota).
+      const triedProviders = [];
+      const maxGenerations = Math.max(1, parseInt(process.env.PATCH_SANDBOX_RETRIES, 10) || 3);
+      for (let attempt = 0; attempt < maxGenerations; attempt++) {
+        const meta = {};
+        let attemptPatch;
+        try {
+          job.updateProgress(50);
+          attemptPatch = await generatePatch({
+            logData,
+            classification,
+            repository,
+            context,
+            installation_id,
+            workflow_run,
+            skipProviders: triedProviders,
+            _meta: meta,
           });
-          return { status: 'skipped', reason: 'unsafe_patch', pr_url: null };
+        } catch (genErr) {
+          // A patch that fails the safety check (e.g. would touch .env / a test
+          // file) is non-retryable — regenerating won't help. Skip cleanly.
+          if (genErr.code === 'PATCH_UNSAFE') {
+            logger.warn('Skipping repair: generated patch failed safety check', {
+              jobId, repo: repository?.full_name, reason: genErr.message,
+            });
+            return { status: 'skipped', reason: 'unsafe_patch', pr_url: null };
+          }
+          // No (more) providers could generate. If an earlier attempt already
+          // produced a patch + sandbox result, keep that; otherwise propagate.
+          if (attempt > 0 && patch) {
+            logger.warn('No further provider available to regenerate; keeping previous attempt', {
+              jobId, repo: repository?.full_name, error: genErr.message,
+            });
+            break;
+          }
+          throw genErr;
         }
-        throw genErr;
+        if (meta.provider) triedProviders.push(meta.provider);
+
+        // A placeholder/empty patch carries no fix — try the next provider if we
+        // still can, otherwise fall through to the placeholder guard below.
+        if (isPlaceholderPatch(attemptPatch)) {
+          patch = attemptPatch;
+          if (meta.provider && attempt < maxGenerations - 1) continue;
+          break;
+        }
+
+        patch = attemptPatch;
+        job.updateProgress(70);
+        sandboxResult = await validateInSandbox({
+          patch, repository, installation_id, workflow_run,
+        });
+
+        // Accept as soon as the patch passes, or when the result is unverified
+        // (lightweight) since regenerating wouldn't give a more trustworthy
+        // signal. Only a *verified* failure with another untried provider
+        // available is worth a regeneration.
+        if (sandboxResult.passed || !sandboxResult.verified || !meta.provider) break;
+        logger.info('Patch failed sandbox; regenerating with a different provider', {
+          jobId, repo: repository?.full_name, failedProvider: meta.provider, attempt: attempt + 1,
+        });
       }
     }
 
@@ -192,14 +244,15 @@ async function processRepairJob(job) {
       return { status: 'skipped', reason: 'placeholder_patch', pr_url: null };
     }
 
-    // Step 6: Validate patch in sandbox
-    job.updateProgress(70);
-    const sandboxResult = await validateInSandbox({
-      patch,
-      repository,
-      installation_id,
-      workflow_run,
-    });
+    // Safety net: if for any reason no sandbox result was produced (e.g. every
+    // generation yielded a placeholder), validate the final patch once now so
+    // downstream confidence has a real signal.
+    if (!sandboxResult) {
+      job.updateProgress(70);
+      sandboxResult = await validateInSandbox({
+        patch, repository, installation_id, workflow_run,
+      });
+    }
 
     // Step 7: Compute confidence
     job.updateProgress(80);

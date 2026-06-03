@@ -45,6 +45,58 @@ function getExtension(filePath) {
   return base.slice(dot).toLowerCase();
 }
 
+// Coarse language family for an extension. Used to keep retrieval few-shot
+// examples in the SAME language as the repair: injecting JS examples into a
+// Python (or Kotlin/Go/...) repair drifts the model off the required output
+// format and toward wrong fixes (measured: 5/5 -> 0/5 on a real Python bug).
+// Extensions in the same family share enough syntax that examples transfer
+// (e.g. JS/TS). Unknown extensions fall back to the extension itself, so a new
+// language only ever matches its own files — future-proof, no allowlist to
+// maintain for detection (that still comes from Linguist via SOURCE_EXTS).
+const LANG_FAMILY = {
+  '.js': 'js', '.jsx': 'js', '.mjs': 'js', '.cjs': 'js',
+  '.ts': 'js', '.tsx': 'js', '.mts': 'js', '.cts': 'js', '.vue': 'js', '.svelte': 'js',
+  '.py': 'python', '.pyi': 'python',
+  '.rb': 'ruby', '.rake': 'ruby',
+  '.go': 'go',
+  '.rs': 'rust',
+  '.java': 'java',
+  '.kt': 'kotlin', '.kts': 'kotlin',
+  '.cs': 'csharp',
+  '.c': 'cpp', '.cc': 'cpp', '.cpp': 'cpp', '.cxx': 'cpp', '.h': 'cpp', '.hpp': 'cpp', '.hh': 'cpp',
+  '.php': 'php',
+  '.swift': 'swift',
+  '.scala': 'scala', '.sc': 'scala',
+  '.dart': 'dart',
+  '.ex': 'elixir', '.exs': 'elixir',
+};
+
+// Language family key for a single file (extension-based), or '' if no extension.
+function languageKey(filePath) {
+  const ext = getExtension(filePath);
+  if (!ext) return '';
+  return LANG_FAMILY[ext] || ext;
+}
+
+// Dominant language family across a list of paths (ignoring tests / non-source),
+// or '' when none can be determined. Used to label both the repair and each
+// few-shot example so we only ever pair same-language examples.
+function dominantLanguage(paths) {
+  const counts = {};
+  for (const p of paths || []) {
+    if (!p || TEST_PATH.test(p)) continue;
+    const k = languageKey(p);
+    if (!k) continue;
+    counts[k] = (counts[k] || 0) + 1;
+  }
+  let best = '';
+  let bestN = 0;
+  for (const [k, n] of Object.entries(counts)) {
+    if (n > bestN) { best = k; bestN = n; }
+  }
+  return best;
+}
+
 function isExcludedPath(filePath) {
   return EXCLUDED_DIR.test(filePath)
     || FORBIDDEN_DIR.test(filePath)
@@ -73,6 +125,8 @@ function isFetchableAffectedFile(filePath) {
 module.exports = {
   SOURCE_EXTS,
   getExtension,
+  languageKey,
+  dominantLanguage,
   isExcludedPath,
   isSourceFile,
   isFetchableAffectedFile,

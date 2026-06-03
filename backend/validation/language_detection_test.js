@@ -13,7 +13,7 @@ function check(name, fn) {
 
 const {
   SOURCE_EXTS, isSourceFile, isExcludedPath, isFetchableAffectedFile, getExtension,
-  languageKey, dominantLanguage,
+  languageKey, dominantLanguage, isTestPath, isBuildFile,
 } = require('../src/utils/sourceDetection');
 const { extractError } = require('../src/agents/logParser');
 const { retrieve } = require('../src/agents/retrieval');
@@ -77,6 +77,44 @@ check('still refuses vendored/generated/binary affected paths', () => {
   assert.strictEqual(isFetchableAffectedFile('node_modules/x/y.js'), false);
   assert.strictEqual(isFetchableAffectedFile('dist/app.min.js'), false);
   assert.strictEqual(isFetchableAffectedFile('logo.png'), false);
+});
+
+console.log('\n== sourceDetection: test-file detection (JVM + snake conventions) ==');
+
+check('detects JVM CamelCase test classes (FooTest.kt, MyTests.java, FooSpec.scala, BarIT.java)', () => {
+  for (const p of ['IntervalsTest.kt', 'src/test/kotlin/com/warpfix/IntervalsTest.kt',
+    'MyTests.java', 'FooSpec.scala', 'pkg/BarIT.java', 'BazITCase.groovy']) {
+    assert.strictEqual(isTestPath(p), true, `expected test: ${p}`);
+    assert.strictEqual(isSourceFile(p), false, `test must not be paddable source: ${p}`);
+  }
+});
+
+check('does NOT misclassify words that merely end in "test"/"it" (Latest/Manifest/Greatest/Limit)', () => {
+  for (const p of ['Latest.kt', 'Manifest.kt', 'Greatest.kt', 'Limit.kt', 'src/Audit.java']) {
+    assert.strictEqual(isTestPath(p), false, `must NOT be a test: ${p}`);
+    assert.strictEqual(isSourceFile(p), true, `expected real source: ${p}`);
+  }
+});
+
+check('detects snake/dotted test conventions (foo_test.go, test_foo.py, foo_spec.rb, a.test.js)', () => {
+  for (const p of ['pkg/foo_test.go', 'tests/test_foo.py', 'spec/user_spec.rb', 'src/a.test.js']) {
+    assert.strictEqual(isTestPath(p), true, `expected test: ${p}`);
+  }
+});
+
+console.log('\n== sourceDetection: build-file ranking ==');
+
+check('build/packaging wrappers are flagged so they rank below real code', () => {
+  for (const p of ['build.gradle.kts', 'build.gradle', 'settings.gradle.kts', 'gradlew', 'gradlew.bat',
+    'pom.xml', 'build.sbt', 'Makefile', 'CMakeLists.txt', 'a/b/c.gradle']) {
+    assert.strictEqual(isBuildFile(p), true, `expected build file: ${p}`);
+  }
+});
+
+check('real application source is NOT a build file', () => {
+  for (const p of ['src/main/kotlin/com/warpfix/Intervals.kt', 'src/index.js', 'app/main.py']) {
+    assert.strictEqual(isBuildFile(p), false, `expected NOT build file: ${p}`);
+  }
 });
 
 check('getExtension handles dotfiles and no-extension paths', () => {

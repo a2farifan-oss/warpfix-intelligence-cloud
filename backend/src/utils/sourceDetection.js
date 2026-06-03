@@ -34,8 +34,28 @@ const EXCLUDED_FILE = /(\.min\.(?:js|css)|\.bundle\.js|-lock\.json|package-lock\
 const ASSET_EXT = /\.(?:svg|png|jpe?g|gif|ico|bmp|webp|woff2?|ttf|otf|eot|pdf|zip|gz|tgz|tar|7z|rar|mp4|mov|mp3|wav|ogg|class|jar|war|so|dylib|dll|exe|o|a|wasm|bin|lock)$/i;
 
 // Test files: WarpFix fixes the SOURCE, not the tests, so we don't pad context
-// with them (kept from the original behavior).
-const TEST_PATH = /(^|\/)(tests?|__tests__|__mocks__|spec)\/|\.(test|spec)\.\w+$|(^|\/)test\.\w+$/i;
+// with them. Covers dir-based layouts (test/, __tests__/, spec/), the
+// JS/Python/Ruby/Go dotted & underscored conventions (foo.test.js, test_foo.py,
+// foo_test.go, foo_spec.rb), and the JVM CamelCase class convention
+// (FooTest.kt, FooTests.java, FooSpec.scala, FooIT.java). The JVM clause is
+// case-SENSITIVE on purpose so "Latest.kt", "Manifest.kt", "Greatest.kt" (which
+// merely end in a lowercase "test"/"it") are never misclassified as tests.
+const TEST_PATH = /(^|\/)(tests?|__tests__|__mocks__|specs?)\/|\.(test|spec)\.\w+$|(^|\/)test\.\w+$|(^|\/)(?:test|spec)_[\w-]+\.\w+$|[\w-]+_(?:test|spec)\.\w+$/i;
+const TEST_JVM = /(?:Test|Tests|Spec|IT|ITCase)\.(?:kt|kts|java|scala|groovy|clj|cljc|cljs)$/;
+
+function isTest(filePath) {
+  if (!filePath || typeof filePath !== 'string') return false;
+  return TEST_PATH.test(filePath) || TEST_JVM.test(filePath);
+}
+
+// Build/packaging wrapper files. They're "source" by extension but almost never
+// hold the application bug, so they must rank BELOW real code when we pad
+// context — otherwise a root-level build.gradle.kts / gradlew (depth 1) crowds
+// the actual src/.../Foo.kt (depth 5) out of the capped fetch budget.
+const BUILD_FILE = /(^|\/)(?:build\.gradle(?:\.kts)?|settings\.gradle(?:\.kts)?|gradlew(?:\.bat)?|pom\.xml|build\.sbt|Makefile|CMakeLists\.txt|webpack\.config\.\w+|rollup\.config\.\w+|vite\.config\.\w+)$|\.(?:gradle|sbt|bat|cmd|mk)$/i;
+function isBuildFile(filePath) {
+  return !!filePath && typeof filePath === 'string' && BUILD_FILE.test(filePath);
+}
 
 function getExtension(filePath) {
   if (!filePath || typeof filePath !== 'string') return '';
@@ -84,7 +104,7 @@ function languageKey(filePath) {
 function dominantLanguage(paths) {
   const counts = {};
   for (const p of paths || []) {
-    if (!p || TEST_PATH.test(p)) continue;
+    if (!p || isTest(p)) continue;
     const k = languageKey(p);
     if (!k) continue;
     counts[k] = (counts[k] || 0) + 1;
@@ -108,7 +128,7 @@ function isExcludedPath(filePath) {
 // Linguist source/markup extension that isn't excluded/generated/test.
 function isSourceFile(filePath) {
   if (!filePath || isExcludedPath(filePath)) return false;
-  if (TEST_PATH.test(filePath)) return false;
+  if (isTest(filePath)) return false;
   return SOURCE_EXTS.has(getExtension(filePath));
 }
 
@@ -130,5 +150,6 @@ module.exports = {
   isExcludedPath,
   isSourceFile,
   isFetchableAffectedFile,
-  isTestPath: (p) => TEST_PATH.test(p),
+  isBuildFile,
+  isTestPath: isTest,
 };

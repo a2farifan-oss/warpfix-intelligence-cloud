@@ -80,6 +80,18 @@ services:
     name: warpfix-worker
     runtime: node
     plan: starter
+    # NOTE: a clean Kotlin/Gradle (or large Maven) build needs ~0.5GB+ RAM and
+    # OOM-kills this 512MB starter worker mid-sandbox, taking down Python/Node
+    # repairs with it. So verified JVM repairs are intentionally OFF on the free
+    # plan: the heavy build is gated behind SANDBOX_JVM_HEAVY (see
+    # sandboxValidator.js) and JVM failures fall back to the unverified check
+    # (fix generated, no auto-PR). To enable verified Kotlin/Java/Scala repairs,
+    # move to a plan with ≳1GB RAM and add back the JDK install + JAVA_HOME +
+    # GRADLE_USER_HOME below, and set SANDBOX_JVM_HEAVY=1:
+    #   buildCommand: cd backend && npm install && bash scripts/install-jvm.sh
+    #   JAVA_HOME=/opt/render/project/src/.jvm/jdk
+    #   GRADLE_USER_HOME=/opt/render/project/src/.jvm/gradle-home
+    #   SANDBOX_JVM_HEAVY=1
     buildCommand: cd backend && npm install
     startCommand: cd backend && node src/queue/worker.js
     envVars:

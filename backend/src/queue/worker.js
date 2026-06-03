@@ -127,11 +127,19 @@ async function processRepairJob(job) {
     job.updateProgress(40);
     const existingFix = await lookupFingerprint(fingerprint.hash);
 
+    // Only reuse a cached patch that previously earned a high-confidence
+    // (verified-sandbox) result. Reusing a low-confidence patch -- e.g. one that
+    // FAILED its sandbox run -- means an identical failure keeps getting the same
+    // known-bad patch and never regenerates. The minimum aligns with the
+    // verified-sandbox signal (50) and is overridable. This also self-heals any
+    // fingerprints poisoned before the store-side guard below was in place.
+    const reuseMinConfidence = parseInt(process.env.FINGERPRINT_REUSE_MIN_CONFIDENCE, 10) || 50;
     let patch;
     let reusedFingerprint = false;
     if (existingFix && existingFix.resolution_patch && !isPlaceholderPatch(existingFix.resolution_patch)
+        && (existingFix.resolution_confidence || 0) >= reuseMinConfidence
         && await patchAppliesToRepo(existingFix.resolution_patch, repository, installation_id)) {
-      logger.info('Fingerprint match found, reusing patch', { hash: fingerprint.hash });
+      logger.info('Fingerprint match found, reusing patch', { hash: fingerprint.hash, confidence: existingFix.resolution_confidence });
       patch = existingFix.resolution_patch;
       reusedFingerprint = true;
     } else {
@@ -257,10 +265,17 @@ async function processRepairJob(job) {
       prNumber = prResult.number;
     }
 
-    // Step 10: Store fingerprint (always — grows the CI Failure Genome regardless of PR)
+    // Step 10: Store fingerprint (always — grows the CI Failure Genome regardless
+    // of PR). But only persist the patch as REUSABLE when the sandbox actually
+    // passed: caching a patch that failed verification poisons the fingerprint so
+    // every future identical failure reuses a known-bad patch and skips
+    // regeneration. A non-passing run still records the fingerprint (genome
+    // stats) -- just without a reusable patch.
     let fingerprintId = null;
     try {
-      fingerprintId = await storeFingerprint(fingerprint, patch, confidence.score);
+      const cacheablePatch = sandboxResult.passed ? patch : null;
+      const cacheableConfidence = sandboxResult.passed ? confidence.score : 0;
+      fingerprintId = await storeFingerprint(fingerprint, cacheablePatch, cacheableConfidence);
     } catch (fpErr) {
       logger.debug('Fingerprint storage failed', { error: fpErr.message });
     }

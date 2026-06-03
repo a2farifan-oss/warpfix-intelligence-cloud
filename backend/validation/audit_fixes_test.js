@@ -6,7 +6,7 @@ const { classifyActionability } = require('../src/agents/actionability');
 const { dedupDecision } = require('../src/agents/prDedup');
 const { computeConfidence } = require('../src/agents/confidenceEngine');
 const {
-  validatePatchSafety, recoverBareFileRewrite, parseFileBlocks, stripContentFence,
+  validatePatchSafety, recoverBareFileRewrite, parseFileBlocks, stripContentFence, extractFencedBody,
 } = require('../src/agents/patchGenerator');
 
 let pass = 0, fail = 0;
@@ -260,6 +260,40 @@ check('stripContentFence handles leading-only, trailing-only, both, and none', (
   assert.strictEqual(stripContentFence('const a = 1;\n```'), 'const a = 1;');
   assert.strictEqual(stripContentFence('```\nconst a = 1;\n```'), 'const a = 1;');
   assert.strictEqual(stripContentFence('const a = 1;'), 'const a = 1;');
+});
+
+console.log('\n== bare rewrite: LEADING PROSE before a ```fence (real prod bug, run 26880086903) ==');
+
+// Prod failure: HF (and the hffree fallback) omitted the ===FILE=== wrapper and
+// returned a short explanation BEFORE a ```python fence holding the whole file.
+// stripContentFence only strips a fence at position 0, so with prose first the
+// fence was not at the start and the prose + "```python" line survived as the
+// head of the written file -> Python SyntaxError -> verified sandbox failed,
+// confidence 15, no PR. extractFencedBody pulls the fenced file body out
+// regardless of leading prose.
+check('bare rewrite with leading prose + matched ```python fence is recovered cleanly', () => {
+  const out = 'The bug is an off-by-one: touching intervals must merge, so use `<=`.\nHere is the corrected file:\n\n```python\n' + PY_FIXED + '\n```';
+  const r = recoverBareFileRewrite(out, srcFiles);
+  assert.ok(r && r.path === 'src/intervals.py', 'expected recovery to src/intervals.py');
+  assert.ok(!/```/.test(r.content), 'no fence may survive in the file body');
+  assert.ok(!/^The bug is/.test(r.content), 'leading prose must be stripped');
+  assert.strictEqual(r.content.trim(), PY_FIXED.trim(), 'recovered body equals the clean fixed file');
+  assert.ok(/start <= last\[1\]/.test(r.content), 'fix is preserved');
+});
+
+check('bare rewrite with leading prose + opening-only fence is recovered cleanly', () => {
+  const out = 'Here is the fixed source file:\n\n```python\n' + PY_FIXED;
+  const r = recoverBareFileRewrite(out, srcFiles);
+  assert.ok(r && r.path === 'src/intervals.py');
+  assert.ok(!/```/.test(r.content) && !/^Here is/.test(r.content));
+  assert.ok(/start <= last\[1\]/.test(r.content));
+});
+
+check('extractFencedBody: largest fenced block wins over an inline snippet, prose ignored', () => {
+  assert.strictEqual(extractFencedBody('prose\n```python\nconst a = 1;\n```'), 'const a = 1;');
+  assert.strictEqual(extractFencedBody('see `x`:\n```py\nline1\nline2\nline3\n```'), 'line1\nline2\nline3');
+  assert.strictEqual(extractFencedBody('text\n```js\na\nb'), 'a\nb');
+  assert.strictEqual(extractFencedBody('a\nb\nc'), 'a\nb\nc');
 });
 
 console.log(`\n==== ${pass} passed, ${fail} failed ====\n`);

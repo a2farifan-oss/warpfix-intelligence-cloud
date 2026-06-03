@@ -252,13 +252,20 @@ async function callOneProvider(provider, { system, user, maxTokens }) {
 // LLM_PROVIDER may be a comma-separated fallback chain, e.g. "groq,github".
 // Each provider is tried in order; a daily cap (or hard failure) on one falls
 // through to the next free provider so repairs keep working at $0.
-async function callLLM({ system, user, maxTokens = 2000 }) {
+// `skipProviders` lets a caller exclude providers that already produced a patch
+// which failed sandbox verification, so a regeneration tries a DIFFERENT model.
+// `_meta` (if passed) is populated with `.provider` = the provider that answered,
+// so the caller can track which models it has already tried.
+async function callLLM({
+  system, user, maxTokens = 2000, skipProviders = [], _meta,
+}) {
   const defaultChain = process.env.GROQ_API_KEY ? 'groq' : 'github';
+  const skip = new Set((skipProviders || []).map((s) => String(s).toLowerCase()));
   const chain = (process.env.LLM_PROVIDER || defaultChain)
     .toLowerCase()
     .split(',')
     .map((s) => s.trim())
-    .filter((p) => PROVIDER_FNS[p]);
+    .filter((p) => PROVIDER_FNS[p] && !skip.has(p));
 
   const available = chain.filter(providerHasKey);
   if (available.length === 0) {
@@ -274,6 +281,7 @@ async function callLLM({ system, user, maxTokens = 2000 }) {
       if (provider !== available[0]) {
         logger.info('LLM fallback provider succeeded', { provider });
       }
+      if (_meta) _meta.provider = provider;
       return out;
     } catch (err) {
       lastErr = err;

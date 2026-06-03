@@ -135,11 +135,23 @@ async function executeValidate({ patch, repository, installation_id, workflow_ru
   }
 }
 
-// A spawn that couldn't find the binary resolves with code -1 and an ENOENT-ish
-// message — treat that as "toolchain unavailable" (fall back) rather than a
-// failing test.
+// Decide whether a tool run failed because the toolchain itself is unavailable
+// (so we should fall back to the unverified lightweight check) rather than
+// because the tests genuinely failed.
 function toolchainMissing(res) {
-  return res.code === -1 && /spawn error|ENOENT|not found/i.test(res.out || '');
+  const out = res.out || '';
+  // A spawn that couldn't find the binary resolves with code -1 and an
+  // ENOENT-ish message.
+  if (res.code === -1 && /spawn error|ENOENT|not found/i.test(out)) return true;
+  // A launcher script (./gradlew, mvn) can spawn fine yet abort with a non-zero
+  // exit when the underlying runtime is absent — e.g. gradlew prints "ERROR:
+  // JAVA_HOME is not set and no 'java' command could be found" and exits 1. That
+  // is a missing toolchain (fall back to the lightweight/unverified check), not
+  // a real failing test, so don't let it masquerade as a verified red run.
+  if (/JAVA_HOME is not set|no 'java' command could be found|Unable to locate a Java Runtime|command not found/i.test(out)) {
+    return true;
+  }
+  return false;
 }
 
 // Detect the ecosystem from marker files and run install + test with the right
@@ -324,4 +336,4 @@ async function dockerValidate(patch, repository, installationId) {
   };
 }
 
-module.exports = { validateInSandbox };
+module.exports = { validateInSandbox, toolchainMissing };

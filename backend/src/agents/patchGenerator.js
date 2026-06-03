@@ -354,8 +354,15 @@ function parseFileBlocks(llmOutput) {
 // verify the result, so a wrong guess is rejected rather than shipped.
 function recoverBareFileRewrite(llmOutput, sourceFiles = {}) {
   if (!llmOutput) return null;
-  // Strip a leading/trailing markdown fence (handles opening-only fences too).
-  let text = stripContentFence(llmOutput.trim());
+  // Models that omit the ===FILE=== wrapper very often still wrap the file body
+  // in a ```lang fence AND prepend a sentence or two of explanation ("The bug
+  // is ... here is the corrected file:"). A leading-fence-only strip can't help
+  // there because the fence isn't at position 0 — the prose is — so the prose
+  // and the ```lang line survived as the head of the written file and broke it
+  // (e.g. Python SyntaxError), failing the sandbox even though the fix was right.
+  // extractFencedBody pulls out the fenced code block regardless of leading
+  // prose; if there's no fence it falls back to stripping a leading/trailing one.
+  let text = extractFencedBody(llmOutput.trim());
   // If proper FILE markers exist, this isn't the bare-rewrite case.
   if (!text || /===\s*FILE\s*:/i.test(text)) return null;
 
@@ -395,6 +402,25 @@ function stripContentFence(content) {
   t = t.replace(/^```[\w-]*[ \t]*\r?\n/, '');
   t = t.replace(/\r?\n```[ \t]*$/, '');
   return t.trim();
+}
+
+// Pull a fenced code block out of free-form model output, tolerating leading
+// prose ("Here is the corrected file:") before the fence. A bare full-file
+// rewrite is the file the model fenced, so when one or more ```lang ... ```
+// blocks exist we take the LARGEST (the file itself dwarfs any inline snippet
+// in the explanation). We also handle the very common opening-only fence (the
+// closing ``` was cut off / pushed past max_tokens) by taking everything after
+// the first fence line. With no fence at all, fall back to stripping a
+// leading/trailing fence so a clean bare rewrite is returned unchanged.
+function extractFencedBody(text) {
+  if (!text) return text;
+  const blocks = [...text.matchAll(/```[\w-]*[ \t]*\r?\n([\s\S]*?)\r?\n```/g)].map((m) => m[1]);
+  if (blocks.length) {
+    return blocks.sort((a, b) => b.length - a.length)[0].trim();
+  }
+  const openOnly = text.match(/```[\w-]*[ \t]*\r?\n([\s\S]*)$/);
+  if (openOnly) return openOnly[1].replace(/\r?\n```[ \t]*$/, '').trim();
+  return stripContentFence(text);
 }
 
 function extractDiff(llmOutput) {
@@ -501,4 +527,4 @@ function validatePatchSafety(patch, options = {}) {
   return { safe: reasons.length === 0, reasons: [...new Set(reasons)] };
 }
 
-module.exports = { generatePatch, validatePatchSafety, buildPatchPrompt, recoverBareFileRewrite, parseFileBlocks, stripContentFence };
+module.exports = { generatePatch, validatePatchSafety, buildPatchPrompt, recoverBareFileRewrite, parseFileBlocks, stripContentFence, extractFencedBody };

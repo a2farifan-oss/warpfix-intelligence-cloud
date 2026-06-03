@@ -303,12 +303,12 @@ async function processRepairJob(job) {
     await query(
       `INSERT INTO repairs (failure_id, repository_id, user_id, fingerprint_id,
         patch_diff, patch_summary, confidence_score, sandbox_passed, sandbox_verified,
-        pr_number, pr_url, status, engine_used, duration_ms)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+        pr_number, pr_url, status, engine_used, error_classification, duration_ms)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
       [failureId, repoId, user_id, fingerprintId, patch, classification.summary,
        confidence.score, sandboxResult.passed, !!sandboxResult.verified, prNumber, prUrl,
        sandboxResult.passed ? 'completed' : 'failed',
-       classification.type, duration]
+       classification.type, classification.type, duration]
     );
 
     // Step 12: Increment usage

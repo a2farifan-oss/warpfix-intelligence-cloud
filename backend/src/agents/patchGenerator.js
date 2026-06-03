@@ -1,7 +1,7 @@
 const { logger } = require('../utils/logger');
 const { callLLM } = require('../services/llm');
 const { getFewShotBlock } = require('./retrieval');
-const { isSourceFile, isFetchableAffectedFile } = require('../utils/sourceDetection');
+const { isSourceFile, isFetchableAffectedFile, dominantLanguage } = require('../utils/sourceDetection');
 
 const PATCH_SAFETY_RULES = {
   maxDiffLines: 200,
@@ -85,10 +85,18 @@ async function generatePatch({ logData, classification, repository, context, ins
   // Retrieval-augmented few-shot: prepend similar, previously-verified fixes so
   // the model learns conventions it can't infer from the error alone. Gated and
   // capped; on failure it returns '' and we proceed exactly as before.
+  // Language of the files we're actually repairing, so retrieval only injects
+  // same-language examples (cross-language few-shot drifts the model off the
+  // required output format and toward wrong fixes).
+  const repairLanguage = dominantLanguage([
+    ...(logData.affectedFiles || []),
+    ...Object.keys(sourceFiles),
+  ]);
   const fewShot = getFewShotBlock({
     errorMessage: logData.errorMessage,
     description: classification.suggestedApproach || logData.rootCause || '',
     category: classification.type,
+    language: repairLanguage,
   });
   if (fewShot) prompt = `${fewShot}\n${prompt}`;
 

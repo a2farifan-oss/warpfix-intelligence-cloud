@@ -121,6 +121,58 @@ async function callGitHubModels({ system, user, maxTokens }) {
   return sanitizeLLMText(text);
 }
 
+// Hugging Face Inference Providers expose an OpenAI-compatible router at
+// https://router.huggingface.co/v1, so the same chat/completions shape used by
+// Groq/GitHub Models works unchanged. We register it twice with different keys:
+// `hf` uses a PRO/paid key (HUGGINGFACE_API_KEY) and `hffree` uses a free key
+// (HUGGINGFACE_API_KEY_FREE) — so when the paid monthly credits are exhausted
+// the chain falls through to the free key automatically, at $0.
+async function callHuggingFaceWith(apiKey, providerLabel, { system, user, maxTokens }) {
+  const apiUrl = process.env.HUGGINGFACE_API_URL || 'https://router.huggingface.co/v1';
+  const model = process.env.HUGGINGFACE_MODEL || 'Qwen/Qwen2.5-Coder-32B-Instruct';
+
+  const response = await fetch(`${apiUrl}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        ...(system ? [{ role: 'system', content: system }] : []),
+        { role: 'user', content: user },
+      ],
+      max_tokens: maxTokens,
+      temperature: 0.2,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    logger.error('LLM API error', { provider: providerLabel, status: response.status, error });
+    const e = new Error(`LLM API error: ${response.status} - ${error}`);
+    e.status = response.status;
+    throw e;
+  }
+
+  const data = await response.json();
+  const text = data.choices?.[0]?.message?.content || '';
+  if (!text) {
+    logger.warn('LLM returned empty response', { provider: providerLabel, data });
+  }
+  return sanitizeLLMText(text);
+}
+
+function callHuggingFace(args) {
+  return callHuggingFaceWith(process.env.HUGGINGFACE_API_KEY, 'huggingface', args);
+}
+
+function callHuggingFaceFree(args) {
+  const key = process.env.HUGGINGFACE_API_KEY_FREE || process.env.HUGGINGFACE_API_KEY;
+  return callHuggingFaceWith(key, 'huggingface_free', args);
+}
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Parse the "try again in 1.63s" / "try again in 2h4m43.968s" hint Groq returns
@@ -142,11 +194,29 @@ function isDailyLimit(errMessage) {
   return /tokens per day|\bTPD\b|per day|per 86400/i.test(errMessage || '');
 }
 
-const PROVIDER_FNS = { groq: callGroq, github: callGitHubModels };
+// A provider whose quota/credits are exhausted can't recover within an
+// in-process backoff, so we treat it like a daily cap: stop retrying this
+// provider and fall through to the next one in the chain. Covers Groq's
+// per-day cap and Hugging Face's monthly-credit exhaustion (HTTP 402 /
+// "exceeded your monthly included credits"), so once the paid HF key runs out
+// the chain drops to the free HF key (or GitHub) instead of failing.
+function isQuotaExhausted(errMessage) {
+  return isDailyLimit(errMessage)
+    || /\b402\b|payment required|monthly.*credit|exceeded.*credit|insufficient.*(?:credit|balance|quota)|quota.*exceeded/i.test(errMessage || '');
+}
+
+const PROVIDER_FNS = {
+  groq: callGroq,
+  github: callGitHubModels,
+  hf: callHuggingFace,
+  hffree: callHuggingFaceFree,
+};
 
 function providerHasKey(provider) {
   if (provider === 'groq') return !!process.env.GROQ_API_KEY;
   if (provider === 'github') return !!(process.env.GITHUB_MODELS_TOKEN || process.env.GITHUB_TOKEN);
+  if (provider === 'hf') return !!process.env.HUGGINGFACE_API_KEY;
+  if (provider === 'hffree') return !!(process.env.HUGGINGFACE_API_KEY_FREE || process.env.HUGGINGFACE_API_KEY);
   return false;
 }
 
@@ -161,7 +231,9 @@ async function callOneProvider(provider, { system, user, maxTokens }) {
     } catch (err) {
       lastErr = err;
       const isRateLimit = /\b429\b/.test(err.message) || /rate limit/i.test(err.message);
-      if (isRateLimit && isDailyLimit(err.message)) {
+      // Per-day cap or exhausted paid credits → non-retryable; fall through to
+      // the next provider in the chain (e.g. paid HF → free HF → github).
+      if (isQuotaExhausted(err.message)) {
         err.code = 'LLM_DAILY_LIMIT';
         throw err;
       }
@@ -219,4 +291,10 @@ async function callLLM({ system, user, maxTokens = 2000 }) {
   throw lastErr;
 }
 
-module.exports = { callLLM };
+module.exports = {
+  callLLM,
+  // Exported for unit tests / introspection.
+  PROVIDER_FNS,
+  providerHasKey,
+  isQuotaExhausted,
+};

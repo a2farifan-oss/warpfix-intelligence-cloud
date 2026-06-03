@@ -35,7 +35,7 @@ const TEST_PATH = /(^|\/)(tests?|__tests__|__mocks__|spec)\/|\.(test|spec)\.\w+$
 // rank below real code when filling the capped context window.
 const DOC_EXT = /\.(?:md|markdown|mdx|rst|txt|adoc|asciidoc|org)$/i;
 
-async function generatePatch({ logData, classification, repository, context, installation_id, workflow_run }) {
+async function generatePatch({ logData, classification, repository, context, installation_id, workflow_run, skipProviders = [], _meta }) {
   // The bug lives on the branch/commit whose CI failed, NOT necessarily the
   // default branch. Read (and later patch) the failing ref so the LLM sees the
   // actual broken code instead of an already-correct default branch.
@@ -126,6 +126,10 @@ Rules:
     // it capped the free tier at ~11 repairs/day. 4000 covers normal source
     // files and ~doubles daily throughput. Override via PATCH_MAX_TOKENS.
     maxTokens: parseInt(process.env.PATCH_MAX_TOKENS, 10) || 4000,
+    // When a previous provider's patch failed the sandbox, skip it so this
+    // regeneration uses a DIFFERENT model; _meta surfaces which one answered.
+    skipProviders,
+    _meta,
   });
 
   let patch;
@@ -490,4 +494,4 @@ function validatePatchSafety(patch, options = {}) {
   return { safe: reasons.length === 0, reasons: [...new Set(reasons)] };
 }
 
-module.exports = { generatePatch, validatePatchSafety, buildPatchPrompt, recoverBareFileRewrite };
+module.exports = { generatePatch, validatePatchSafety, buildPatchPrompt, recoverBareFileRewrite, parseFileBlocks, stripContentFence };

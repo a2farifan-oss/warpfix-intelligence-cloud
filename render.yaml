@@ -42,10 +42,6 @@ services:
         sync: false
       - key: GITHUB_MODELS_MODEL
         value: openai/gpt-4o-mini
-      - key: PAGEGRID_API_KEY
-        sync: false
-      - key: PAGEGRID_API_URL
-        value: https://api.pagegrid.in
       - key: DODO_API_KEY
         sync: false
       - key: DODO_WEBHOOK_SECRET
@@ -102,10 +98,6 @@ services:
         sync: false
       - key: GITHUB_MODELS_MODEL
         value: openai/gpt-4o-mini
-      - key: PAGEGRID_API_KEY
-        sync: false
-      - key: PAGEGRID_API_URL
-        value: https://api.pagegrid.in
       - key: GITHUB_APP_ID
         sync: false
       - key: GITHUB_PRIVATE_KEY

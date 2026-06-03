@@ -33,7 +33,7 @@ Warp Terminal / GitHub Webhook
     ├── Log Parser Agent
     ├── Classifier Agent
     ├── Fingerprint Engine
-    ├── Patch Generator Agent (Claude via Pagegrid)
+    ├── Patch Generator Agent (Groq Llama, GitHub Models fallback)
     ├── Sandbox Validator Agent
     ├── Confidence Engine
     └── Pull Request Agent
@@ -52,7 +52,7 @@ Warp Terminal / GitHub Webhook
 | Queue | BullMQ |
 | Cache | Redis |
 | Database | PostgreSQL |
-| LLM | Claude via Pagegrid proxy |
+| LLM | Groq (Llama 3.3) with GitHub Models fallback |
 | Auth | GitHub OAuth |
 | Billing | Dodo Payments |
 | Hosting | Render |
@@ -66,7 +66,7 @@ Warp Terminal / GitHub Webhook
 - PostgreSQL database
 - Redis instance
 - GitHub App credentials
-- Pagegrid API key
+- Groq API key (GitHub Models token optional, used as fallback)
 
 ### 1. Clone & Install
 
@@ -98,11 +98,11 @@ cp backend/.env.example backend/.env
 5. Generate a private key and download it
 6. Copy App ID, Client ID, Client Secret, and Webhook Secret to `.env`
 
-### 4. Pagegrid Setup
+### 4. LLM Provider Setup
 
-1. Go to [pagegrid.in](https://pagegrid.in)
-2. Create an account and get your API key
-3. Set `PAGEGRID_API_KEY` and `PAGEGRID_API_URL` in `.env`
+1. Go to [console.groq.com](https://console.groq.com) and create an API key
+2. Set `GROQ_API_KEY` in `.env` (defaults: `GROQ_MODEL=llama-3.3-70b-versatile`)
+3. Optional fallback: set `GITHUB_MODELS_TOKEN` (a GitHub token) so repairs keep working if Groq's daily cap is hit. The chain is controlled by `LLM_PROVIDER` (default `groq,github`).
 
 ### 5. Dodo Payments Setup
 

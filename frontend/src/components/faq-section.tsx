@@ -21,7 +21,7 @@ const FAQS = [
   },
   {
     q: "What LLM powers the repairs?",
-    a: "WarpFix uses Claude via the Pagegrid proxy for intelligent log parsing, error classification, and patch generation. Quick pattern matching handles common errors without LLM calls.",
+    a: "WarpFix uses Groq (Llama 3.3) for intelligent log parsing, error classification, and patch generation, with GitHub Models as an automatic fallback. Quick pattern matching handles common errors without LLM calls.",
   },
   {
     q: "How do I use the WarpFix CLI?",

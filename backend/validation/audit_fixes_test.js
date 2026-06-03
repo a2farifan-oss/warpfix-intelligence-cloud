@@ -5,7 +5,7 @@ const assert = require('assert');
 const { classifyActionability } = require('../src/agents/actionability');
 const { dedupDecision } = require('../src/agents/prDedup');
 const { computeConfidence } = require('../src/agents/confidenceEngine');
-const { validatePatchSafety } = require('../src/agents/patchGenerator');
+const { validatePatchSafety, recoverBareFileRewrite } = require('../src/agents/patchGenerator');
 
 let pass = 0, fail = 0;
 function check(name, fn) {
@@ -153,6 +153,73 @@ check('touching too many files is rejected', () => {
   const r = validatePatchSafety(blocks(files), { knownFiles: known, sourceFiles: Object.fromEntries(known.map(p => [p, 'orig'])) });
   assert.strictEqual(r.safe, false);
   assert.ok(r.reasons.some(x => /too many files/.test(x)));
+});
+
+console.log('\n== bare full-file rewrite recovery (model omits ===FILE=== markers) ==');
+
+// Real prod failure mode on warpfix-python-e2e: the model returns the complete
+// corrected src/intervals.py as bare content (no ===FILE=== wrapper), so it was
+// dropped -> sandbox "not applicable" -> confidence 35 -> no PR.
+const PY_SRC = `from typing import List, Tuple
+
+Interval = Tuple[int, int]
+
+
+def merge_intervals(intervals: List[Interval]) -> List[Interval]:
+    if not intervals:
+        return []
+    ordered = sorted(intervals, key=lambda pair: pair[0])
+    merged = [list(ordered[0])]
+    for start, end in ordered[1:]:
+        last = merged[-1]
+        if start < last[1]:
+            last[1] = max(last[1], end)
+        else:
+            merged.append([start, end])
+    return [(lo, hi) for lo, hi in merged]
+`;
+const PY_TEST = `from src.intervals import merge_intervals
+
+
+def test_touch():
+    assert merge_intervals([(1, 3), (3, 5)]) == [(1, 5)]
+`;
+const PY_FIXED = PY_SRC.replace('start < last[1]', 'start <= last[1]');
+const srcFiles = { 'tests/test_intervals.py': PY_TEST, 'src/intervals.py': PY_SRC, 'README.md': '# docs\nsome prose\n' };
+
+check('bare corrected file is attributed to the source file it rewrites', () => {
+  const r = recoverBareFileRewrite(PY_FIXED, srcFiles);
+  assert.ok(r, 'expected a recovered block');
+  assert.strictEqual(r.path, 'src/intervals.py');
+  assert.ok(/start <= last\[1\]/.test(r.content), 'recovered content keeps the fix');
+});
+
+check('bare rewrite wrapped in a ```python fence is still recovered', () => {
+  const r = recoverBareFileRewrite('```python\n' + PY_FIXED + '\n```', srcFiles);
+  assert.ok(r && r.path === 'src/intervals.py');
+});
+
+check('never attributes a rewrite to a test or doc file', () => {
+  // Output that looks like the TEST file must NOT be recovered (we never "fix"
+  // by editing tests). Only the test+README are offered as context here.
+  const r = recoverBareFileRewrite(PY_TEST, { 'tests/test_intervals.py': PY_TEST, 'README.md': '# docs\n' });
+  assert.strictEqual(r, null);
+});
+
+check('prose / unrelated output is not mis-attributed to a file', () => {
+  const r = recoverBareFileRewrite('Looking at the error, the bug is an off-by-one in the comparison. You should change < to <=.', srcFiles);
+  assert.strictEqual(r, null);
+});
+
+check('proper ===FILE=== output is left to the normal parser (no recovery)', () => {
+  const r = recoverBareFileRewrite('===FILE: src/intervals.py===\n' + PY_FIXED + '\n===END_FILE===', srcFiles);
+  assert.strictEqual(r, null);
+});
+
+check('recovered block passes the existing scope/safety guard', () => {
+  const patch = blocks([recoverBareFileRewrite(PY_FIXED, srcFiles)]);
+  const r = validatePatchSafety(patch, { knownFiles: Object.keys(srcFiles), sourceFiles: srcFiles });
+  assert.strictEqual(r.safe, true);
 });
 
 console.log(`\n==== ${pass} passed, ${fail} failed ====\n`);

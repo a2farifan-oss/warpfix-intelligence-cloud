@@ -120,6 +120,7 @@ async function runMigrations() {
       pr_url TEXT,
       status VARCHAR(50) DEFAULT 'pending',
       engine_used VARCHAR(100),
+      error_classification VARCHAR(255),
       duration_ms INTEGER,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -377,6 +378,7 @@ async function runMigrations() {
         ALTER TABLE repairs ADD COLUMN IF NOT EXISTS sandbox_verified BOOLEAN DEFAULT FALSE;
         ALTER TABLE repairs ADD COLUMN IF NOT EXISTS pr_state VARCHAR(20);
         ALTER TABLE repairs ADD COLUMN IF NOT EXISTS accepted BOOLEAN;
+        ALTER TABLE repairs ADD COLUMN IF NOT EXISTS error_classification VARCHAR(255);
       EXCEPTION WHEN OTHERS THEN NULL;
       END $$;
     `);

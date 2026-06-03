@@ -30,6 +30,10 @@ const PATCH_SAFETY_RULES = {
 // Path-based rules: env files, CI workflow files, and test files are off-limits.
 const FORBIDDEN_PATH = /(^|\/)\.env(\.|$)|(^|\/)\.github\/workflows\//i;
 const TEST_PATH = /(^|\/)(tests?|__tests__|__mocks__|spec)\/|\.(test|spec)\.\w+$|(^|\/)test\.\w+$/i;
+// Documentation / prose files. They're "source" to Linguist (markup) and worth
+// keeping as last-resort padding, but a bug almost never lives in them, so they
+// rank below real code when filling the capped context window.
+const DOC_EXT = /\.(?:md|markdown|mdx|rst|txt|adoc|asciidoc|org)$/i;
 
 async function generatePatch({ logData, classification, repository, context, installation_id, workflow_run }) {
   // The bug lives on the branch/commit whose CI failed, NOT necessarily the
@@ -60,12 +64,16 @@ async function generatePatch({ logData, classification, repository, context, ins
       if (!filesToFetch.includes(f)) filesToFetch.push(f);
     }
     for (const f of affected) knownFiles.add(f);
-    // When we already know the affected file(s) we don't need to pad with as
-    // much repo context. Override both via env (PATCH_MAX_FILES / its narrower
-    // affected-only variant) if a repo needs more.
+    // When we already know which SOURCE file holds the bug we don't need to pad
+    // with as much repo context. But a failure whose only named files are TESTS
+    // (e.g. a pytest assertion that points at the test, not the code under test)
+    // does NOT tell us where the bug lives -- the fix is in a source file we must
+    // still pull from the repo tree. So only non-test affected files count as a
+    // "known bug location"; otherwise fall back to the full padding budget.
     const maxFiles = parseInt(process.env.PATCH_MAX_FILES, 10) || 4;
-    const fetchCount = affected.length > 0
-      ? Math.min(maxFiles, Math.max(affected.length, parseInt(process.env.PATCH_MAX_FILES_AFFECTED, 10) || 2))
+    const knownBugFiles = affected.filter(f => !TEST_PATH.test(f)).length;
+    const fetchCount = knownBugFiles > 0
+      ? Math.min(maxFiles, Math.max(knownBugFiles, parseInt(process.env.PATCH_MAX_FILES_AFFECTED, 10) || 2))
       : maxFiles;
     sourceFiles = await fetchSourceFiles(filesToFetch.slice(0, fetchCount), repository, installation_id, ref, fetchCount);
     for (const f of Object.keys(sourceFiles)) knownFiles.add(f);
@@ -166,8 +174,15 @@ async function fetchRepoSourceTree(repository, installationId, ref) {
     // artifacts, and binaries.
     return tree.data.tree
       .filter(f => f.type === 'blob' && isSourceFile(f.path))
-      // Prefer shallower paths (more likely to be the entrypoint with the bug).
-      .sort((a, b) => a.path.split('/').length - b.path.split('/').length)
+      .sort((a, b) => {
+        // Real code before docs/markup: bugs live in source, not READMEs, so a
+        // doc file must never crowd a code file out of the (capped) context.
+        const ad = DOC_EXT.test(a.path) ? 1 : 0;
+        const bd = DOC_EXT.test(b.path) ? 1 : 0;
+        if (ad !== bd) return ad - bd;
+        // Then prefer shallower paths (more likely to be the entrypoint).
+        return a.path.split('/').length - b.path.split('/').length;
+      })
       .map(f => f.path)
       .slice(0, 15);
   } catch (err) {

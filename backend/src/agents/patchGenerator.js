@@ -38,19 +38,30 @@ async function generatePatch({ logData, classification, repository, context, ins
     || repository?.default_branch || 'main';
   logger.info('Generating patch', { type: classification.type, repo: repository?.full_name, ref });
 
-  // Fetch source files from GitHub for accurate patching
+  // Fetch source files from GitHub for accurate patching.
   let sourceFiles = {};
   const knownFiles = new Set();
   if (installation_id && repository) {
-    const filesToFetch = [...(logData.affectedFiles || [])];
-    // Also fetch all src/ files from the repo tree for full context
+    const affected = (logData.affectedFiles || []).filter(Boolean);
+    // Affected files (from the stack trace) come FIRST — they almost always hold
+    // the bug. Repo-tree files only pad context when few/no files are known.
+    // Sending fewer, more-relevant files is the single biggest token saving:
+    // it avoids shipping ~5 arbitrary source files on every repair.
+    const filesToFetch = [...affected];
     const repoSrcFiles = await fetchRepoSourceTree(repository, installation_id, ref);
     for (const f of repoSrcFiles) {
       knownFiles.add(f);
       if (!filesToFetch.includes(f)) filesToFetch.push(f);
     }
-    for (const f of (logData.affectedFiles || [])) knownFiles.add(f);
-    sourceFiles = await fetchSourceFiles(filesToFetch.slice(0, 10), repository, installation_id, ref);
+    for (const f of affected) knownFiles.add(f);
+    // When we already know the affected file(s) we don't need to pad with as
+    // much repo context. Override both via env (PATCH_MAX_FILES / its narrower
+    // affected-only variant) if a repo needs more.
+    const maxFiles = parseInt(process.env.PATCH_MAX_FILES, 10) || 4;
+    const fetchCount = affected.length > 0
+      ? Math.min(maxFiles, Math.max(affected.length, parseInt(process.env.PATCH_MAX_FILES_AFFECTED, 10) || 2))
+      : maxFiles;
+    sourceFiles = await fetchSourceFiles(filesToFetch.slice(0, fetchCount), repository, installation_id, ref, fetchCount);
     for (const f of Object.keys(sourceFiles)) knownFiles.add(f);
     logger.info('Fetched source files', { count: Object.keys(sourceFiles).length, files: Object.keys(sourceFiles), ref });
   }
@@ -152,7 +163,7 @@ async function fetchRepoSourceTree(repository, installationId, ref) {
   }
 }
 
-async function fetchSourceFiles(affectedFiles, repository, installationId, ref) {
+async function fetchSourceFiles(affectedFiles, repository, installationId, ref, maxFiles = 5) {
   const files = {};
   try {
     const { getInstallationOctokit } = require('../services/github');
@@ -161,7 +172,7 @@ async function fetchSourceFiles(affectedFiles, repository, installationId, ref) 
     const repo = repository.name;
     const branch = ref || repository.default_branch || 'main';
 
-    for (const filePath of affectedFiles.slice(0, 5)) {
+    for (const filePath of affectedFiles.slice(0, maxFiles)) {
       try {
         const resp = await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
           owner, repo, path: filePath, ref: branch,
@@ -184,7 +195,7 @@ function buildPatchPrompt(logData, classification, context, sourceFiles = {}) {
   prompt += `Error: ${logData.errorMessage}\n\n`;
 
   if (logData.stackTrace) {
-    prompt += `Stack trace:\n${logData.stackTrace.substring(0, 2000)}\n\n`;
+    prompt += `Stack trace:\n${logData.stackTrace.substring(0, 1200)}\n\n`;
   }
 
   if (logData.rootCause) {
@@ -202,9 +213,19 @@ function buildPatchPrompt(logData, classification, context, sourceFiles = {}) {
   // the repair ships nothing ("No committable source files").
   const fileEntries = Object.entries(sourceFiles);
   if (fileEntries.length > 0) {
+    // Token budget: cap per-file size and total reference-source size so a big
+    // repo can't blow the prompt (and the per-day token budget). Tunable via
+    // env. Files are already ordered affected-first, so the relevant code is
+    // never the part that gets dropped.
+    const perFile = parseInt(process.env.PATCH_FILE_CHARS, 10) || 3500;
+    const totalBudget = parseInt(process.env.PATCH_SRC_CHAR_BUDGET, 10) || 12000;
     prompt += `\n----- CURRENT SOURCE FILES (read-only, for reference) -----\n`;
+    let used = 0;
     for (const [path, content] of fileEntries) {
-      prompt += `\n>>>>> BEGIN ${path} >>>>>\n${content.substring(0, 4000)}\n<<<<< END ${path} <<<<<\n`;
+      if (used >= totalBudget) break;
+      const slice = content.substring(0, Math.min(perFile, totalBudget - used));
+      prompt += `\n>>>>> BEGIN ${path} >>>>>\n${slice}\n<<<<< END ${path} <<<<<\n`;
+      used += slice.length;
     }
     prompt += `----- END SOURCE FILES -----\n\n`;
   }
@@ -382,4 +403,4 @@ function validatePatchSafety(patch, options = {}) {
   return { safe: reasons.length === 0, reasons: [...new Set(reasons)] };
 }
 
-module.exports = { generatePatch, validatePatchSafety };
+module.exports = { generatePatch, validatePatchSafety, buildPatchPrompt };

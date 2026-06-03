@@ -20,6 +20,8 @@ async function validateInSandbox({ patch, repository, installation_id, workflow_
       if (real) {
         logger.info('Sandbox executed full test suite', {
           repo: repository?.full_name, passed: real.passed,
+          language: real.language,
+          outputTail: real.passed ? undefined : (real.output || '').slice(-700),
         });
         return real;
       }

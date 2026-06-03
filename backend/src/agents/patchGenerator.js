@@ -145,6 +145,24 @@ Rules:
       logger.info('Recovered bare file rewrite (model omitted ===FILE=== markers)', { path: recovered.path });
       fileBlocks = [recovered];
     }
+    // TEMP DIAGNOSTIC: surface what the model actually returned and what we
+    // recovered, so a prod sandbox failure on a recovered patch can be told
+    // apart from a genuinely wrong model fix.
+    const rc = recovered && recovered.content ? recovered.content : '';
+    const rcLines = rc.split('\n');
+    logger.info('BAREREC_DIAG', {
+      rawLen: result ? result.length : 0,
+      rawHead: result ? result.slice(0, 200) : '',
+      rawTail: result ? result.slice(-160) : '',
+      recovered: !!recovered,
+      recPath: recovered ? recovered.path : null,
+      recLen: rc.length,
+      recFirst3: rcLines.slice(0, 3).join(' \u23ce '),
+      recLast2: rcLines.slice(-2).join(' \u23ce '),
+      hasLe: rc.includes('<='),
+      hasDef: rc.includes('def '),
+      startsFence: rc.trimStart().startsWith('```'),
+    });
   }
   if (fileBlocks.length > 0) {
     // Store as JSON with _warpfix_format marker for the PR agent

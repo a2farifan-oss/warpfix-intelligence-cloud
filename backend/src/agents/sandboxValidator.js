@@ -247,15 +247,29 @@ async function runProjectTests(dir, steps) {
   }
 
   // ---- Java / Maven / Gradle ----
-  // Bound the JVM footprint: Gradle's *default* daemon heap is -Xmx512m and a
-  // build spawns several JVMs (wrapper launcher + build daemon + forked test
-  // worker), so an uncapped `./gradlew test` can use far more memory than a
-  // small instance has and OOM-kill the worker mid-sandbox. JAVA_TOOL_OPTIONS
+  // A clean Kotlin/Gradle (or large Maven) build spawns several JVMs (wrapper
+  // launcher + build daemon + forked test worker) and needs ~0.5GB+ of memory
+  // even with aggressive heap/metaspace caps. On a memory-constrained worker
+  // that exceeds the instance's RAM and OOM-kills the whole process mid-build,
+  // taking down unrelated (Python/Node) repairs too. So the heavy JVM build is
+  // OPT-IN: it only runs when SANDBOX_JVM_HEAVY=1, which must only be set on a
+  // worker with enough RAM (≳1GB). When it's disabled we return null so JVM
+  // repairs fall back to the lightweight (unverified) check — a fix is still
+  // generated, it just won't open an auto-PR (the confidence gate keeps
+  // unverified fixes from shipping), which is the intended safe behavior on
+  // small plans.
+  const jvmHeavyEnabled = process.env.SANDBOX_JVM_HEAVY === '1';
+  const hasJvmProject = has('pom.xml') || has('build.gradle') || has('build.gradle.kts');
+  if (hasJvmProject && !jvmHeavyEnabled) {
+    logger.info('Skipping verified JVM sandbox; SANDBOX_JVM_HEAVY not enabled (needs a worker with ≳1GB RAM). Falling back to unverified.', {
+      reason: 'jvm_heavy_disabled',
+    });
+    return null;
+  }
+  // Bound the JVM footprint when the heavy build *is* enabled: JAVA_TOOL_OPTIONS
   // is honoured by *every* JVM the build forks, so it caps heap + metaspace +
   // code-cache uniformly; GRADLE_OPTS disables the daemon, serializes workers,
-  // and runs the Kotlin compiler in-process (one fewer JVM). NOTE: a clean
-  // Kotlin/Gradle build still needs ~0.5GB+ even tuned this hard, so verified
-  // JVM repairs require a worker plan with enough RAM (≳1GB).
+  // and runs the Kotlin compiler in-process (one fewer JVM).
   const JVM_SHRINK = '-Xmx256m -XX:+UseSerialGC -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=48m -XX:TieredStopAtLevel=1 -Xss640k';
   const JVM_ENV = {
     JAVA_TOOL_OPTIONS: JVM_SHRINK,

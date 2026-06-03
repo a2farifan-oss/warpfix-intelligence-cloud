@@ -13,8 +13,10 @@ function check(name, fn) {
 
 const {
   SOURCE_EXTS, isSourceFile, isExcludedPath, isFetchableAffectedFile, getExtension,
+  languageKey, dominantLanguage,
 } = require('../src/utils/sourceDetection');
 const { extractError } = require('../src/agents/logParser');
+const { retrieve } = require('../src/agents/retrieval');
 
 console.log('\n== sourceDetection: Linguist coverage ==');
 
@@ -138,6 +140,61 @@ check('does NOT capture dotted class names or minified libs as files', () => {
 check('skips node_modules / site-packages frames', () => {
   const files = affected('at /home/runner/work/app/app/node_modules/express/lib/router.js:281:22\n  File "/usr/lib/python3.11/site-packages/flask/app.py", line 2');
   assert.ok(!files.some((f) => f.includes('node_modules') || f.includes('site-packages')), files.join(','));
+});
+
+console.log('\n== sourceDetection: language family ==');
+
+check('languageKey groups JS/TS family and maps common languages', () => {
+  for (const p of ['a.js', 'a.jsx', 'a.ts', 'a.tsx', 'a.mjs', 'a.vue']) {
+    assert.strictEqual(languageKey(p), 'js', `${p} should be js family`);
+  }
+  assert.strictEqual(languageKey('src/intervals.py'), 'python');
+  assert.strictEqual(languageKey('Main.kt'), 'kotlin');
+  assert.strictEqual(languageKey('main.go'), 'go');
+  assert.strictEqual(languageKey('lib.rs'), 'rust');
+});
+
+check('languageKey falls back to the raw extension for unknown langs (future-proof)', () => {
+  assert.strictEqual(languageKey('thing.zig'), '.zig');
+  assert.strictEqual(languageKey('noext'), '');
+});
+
+check('dominantLanguage ignores test files and picks the source language', () => {
+  assert.strictEqual(dominantLanguage(['tests/test_intervals.py', 'src/intervals.py', 'README.md']), 'python');
+  assert.strictEqual(dominantLanguage(['app/Main.kt', 'app/Util.kt']), 'kotlin');
+  assert.strictEqual(dominantLanguage([]), '');
+});
+
+console.log('\n== retrieval: same-language few-shot only ==');
+
+// The seed KB is 100% JavaScript. A non-JS repair must NOT be primed with JS
+// examples — doing so drifts the model off the required ===FILE=== output
+// format and toward wrong fixes (measured 5/5 -> 0/5 on a real Python bug).
+const pyQuery = {
+  errorMessage: 'assert merge_intervals([(1, 3), (3, 5)]) == [(1, 5)]',
+  description: '', category: 'test_failure',
+};
+
+check('Python repair retrieves ZERO JS examples', () => {
+  const got = retrieve({ ...pyQuery, language: 'python' });
+  assert.strictEqual(got.length, 0, `expected 0, got ${got.length} (${got.map((e) => e.category)})`);
+});
+
+check('JS repair still retrieves examples (few-shot preserved where it helps)', () => {
+  const got = retrieve({ ...pyQuery, language: 'js' });
+  assert.ok(got.length > 0, 'expected JS examples for a JS repair');
+  assert.ok(got.every((e) => Object.keys(e.fix || {}).some((p) => /\.(?:js|jsx|ts|tsx|mjs|cjs)$/i.test(p))),
+    'every retrieved example should be a JS-family fix');
+});
+
+check('unknown repair language does not crash and yields no cross-language noise', () => {
+  const got = retrieve({ ...pyQuery, language: '.zig' });
+  assert.strictEqual(got.length, 0, 'no zig examples exist, so none should be returned');
+});
+
+check('omitting language preserves prior behavior (back-compat)', () => {
+  const got = retrieve({ ...pyQuery });
+  assert.ok(got.length > 0, 'no-language query should still retrieve from the pool');
 });
 
 console.log(`\n${pass} passed, ${fail} failed`);

@@ -15,6 +15,15 @@
 const fs = require('fs');
 const path = require('path');
 const { logger } = require('../utils/logger');
+const { dominantLanguage } = require('../utils/sourceDetection');
+
+// Language family of an example, derived from the paths of its fix files. Used
+// to only ever pair a repair with SAME-language examples (the seed KB is all
+// JavaScript, so without this a Python/Kotlin/Go repair gets JS few-shot that
+// drifts the model off-format and toward wrong fixes).
+function exampleLanguage(e) {
+  return dominantLanguage(Object.keys((e && e.fix) || {}));
+}
 
 const KB_PATH = path.join(__dirname, 'data', 'repair-kb.json');
 const DEFAULT_K = parseInt(process.env.WARPFIX_RETRIEVAL_K, 10) || 3;
@@ -41,7 +50,7 @@ function maybeRefreshLearned() {
   Promise.resolve()
     .then(() => require('./learnedFixes').loadRecentLearnedFixes())
     .then((rows) => {
-      _learned = (rows || []).map((e) => ({ ...e, _tok: tokenize(`${e.errorMessage} ${e.description}`) }));
+      _learned = (rows || []).map((e) => ({ ...e, _tok: tokenize(`${e.errorMessage} ${e.description}`), _lang: exampleLanguage(e) }));
       _learnedAt = Date.now();
       if (_learned.length) logger.info('Retrieval learned-fixes refreshed', { count: _learned.length });
     })
@@ -63,7 +72,7 @@ function loadKB() {
   if (_kb) return _kb;
   try {
     const raw = JSON.parse(fs.readFileSync(KB_PATH, 'utf8'));
-    _kb = raw.map((e) => ({ ...e, _tok: tokenize(`${e.errorMessage} ${e.description}`) }));
+    _kb = raw.map((e) => ({ ...e, _tok: tokenize(`${e.errorMessage} ${e.description}`), _lang: exampleLanguage(e) }));
     logger.info('Retrieval KB loaded', { pairs: _kb.length });
   } catch (err) {
     logger.warn('Retrieval KB unavailable; few-shot disabled', { error: err.message });
@@ -80,7 +89,14 @@ function retrieve(query, k = DEFAULT_K) {
   if (pool.length === 0) return [];
   const qt = tokenize(`${query.errorMessage || ''} ${query.description || ''}`);
   if (qt.size === 0) return [];
-  return pool
+  // Same-language only: a repair in language X must not be primed with examples
+  // from another language. When the repair language is unknown we don't filter
+  // (preserves prior behavior). Examples whose own language can't be determined
+  // are excluded under a known repair language to avoid cross-language drift.
+  const lang = query.language || '';
+  const langPool = lang ? pool.filter((e) => e._lang === lang) : pool;
+  if (lang && langPool.length === 0) return [];
+  return langPool
     .map((e) => ({
       e,
       s: jaccard(qt, e._tok)

@@ -129,7 +129,19 @@ Rules:
   });
 
   let patch;
-  const fileBlocks = parseFileBlocks(result);
+  let fileBlocks = parseFileBlocks(result);
+  if (fileBlocks.length === 0) {
+    // Some models (notably on non-JS repairs, where there's no same-language
+    // few-shot to demonstrate the wrapper) ignore the ===FILE: path=== markers
+    // and just return the COMPLETE corrected file as bare content. Recover that
+    // case so the (often correct) fix isn't thrown away; the sandbox still
+    // verifies it, so a wrong attribution is rejected, not shipped.
+    const recovered = recoverBareFileRewrite(result, sourceFiles);
+    if (recovered) {
+      logger.info('Recovered bare file rewrite (model omitted ===FILE=== markers)', { path: recovered.path });
+      fileBlocks = [recovered];
+    }
+  }
   if (fileBlocks.length > 0) {
     // Store as JSON with _warpfix_format marker for the PR agent
     patch = JSON.stringify({ _warpfix_format: 'file_blocks', files: fileBlocks });
@@ -329,6 +341,45 @@ function parseFileBlocks(llmOutput) {
   return files;
 }
 
+// Recover the common "bare full-file rewrite" failure: the model returns the
+// complete corrected source file (with the fix applied) but WITHOUT the
+// required ===FILE: path=== / ===END_FILE=== wrapper, so parseFileBlocks finds
+// nothing and the fix is lost. We attribute that bare content to the one source
+// file it is clearly a rewrite of — matching only against real source files we
+// actually sent (never tests, docs, or lockfiles) — and rely on the sandbox to
+// verify the result, so a wrong guess is rejected rather than shipped.
+function recoverBareFileRewrite(llmOutput, sourceFiles = {}) {
+  if (!llmOutput) return null;
+  let text = llmOutput.trim();
+  const fence = text.match(/^```[\w-]*\n([\s\S]*?)\n```$/);
+  if (fence) text = fence[1].trim();
+  // If proper FILE markers exist, this isn't the bare-rewrite case.
+  if (!text || /===\s*FILE\s*:/i.test(text)) return null;
+
+  const candidates = Object.entries(sourceFiles).filter(([p]) =>
+    !TEST_PATH.test(p) && !DOC_EXT.test(p)
+    && !PATCH_SAFETY_RULES.forbiddenFileChanges.includes(p.split('/').pop()));
+  if (candidates.length === 0) return null;
+
+  const outSet = new Set(text.split('\n').map((l) => l.trim()).filter(Boolean));
+  let best = null;
+  let second = 0;
+  for (const [path, content] of candidates) {
+    const cLines = content.split('\n').map((l) => l.trim()).filter(Boolean);
+    if (cLines.length === 0) continue;
+    let hit = 0;
+    for (const l of cLines) if (outSet.has(l)) hit++;
+    const ratio = hit / cLines.length;
+    if (!best || ratio > best.ratio) { second = best ? best.ratio : 0; best = { path, ratio }; }
+    else if (ratio > second) second = ratio;
+  }
+  // A genuine full-file rewrite keeps the large majority of the original lines
+  // (only the buggy line(s) change), and must be clearly the best match, so
+  // prose / unrelated output is never mis-attributed to a file.
+  if (!best || best.ratio < 0.6 || (best.ratio - second) < 0.2) return null;
+  return { path: best.path, content: text };
+}
+
 // Remove a leading/trailing ```lang ... ``` fence around file content if present.
 function stripContentFence(content) {
   const m = content.match(/^```[\w-]*\n([\s\S]*?)\n?```$/);
@@ -439,4 +490,4 @@ function validatePatchSafety(patch, options = {}) {
   return { safe: reasons.length === 0, reasons: [...new Set(reasons)] };
 }
 
-module.exports = { generatePatch, validatePatchSafety, buildPatchPrompt };
+module.exports = { generatePatch, validatePatchSafety, buildPatchPrompt, recoverBareFileRewrite };

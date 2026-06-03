@@ -1,6 +1,7 @@
 const { logger } = require('../utils/logger');
 const { callLLM } = require('../services/llm');
 const { getFewShotBlock } = require('./retrieval');
+const { isSourceFile, isFetchableAffectedFile } = require('../utils/sourceDetection');
 
 const PATCH_SAFETY_RULES = {
   maxDiffLines: 200,
@@ -42,7 +43,12 @@ async function generatePatch({ logData, classification, repository, context, ins
   let sourceFiles = {};
   const knownFiles = new Set();
   if (installation_id && repository) {
-    const affected = (logData.affectedFiles || []).filter(Boolean);
+    // Affected files come from the failure itself (stack trace / compiler error).
+    // We fetch them regardless of extension — only filtering out clearly
+    // non-source things (vendored dirs, generated artifacts, binaries) — so a
+    // repo in any language (Kotlin, Swift, C++ headers, ...) still gets its
+    // relevant source, not just the old hardcoded-extension set.
+    const affected = (logData.affectedFiles || []).filter(Boolean).filter(isFetchableAffectedFile);
     // Affected files (from the stack trace) come FIRST — they almost always hold
     // the bug. Repo-tree files only pad context when few/no files are known.
     // Sending fewer, more-relevant files is the single biggest token saving:
@@ -141,18 +147,25 @@ async function fetchRepoSourceTree(repository, installationId, ref) {
       tree_sha: treeish,
       recursive: '1',
     });
-    
+
+    // GitHub caps the recursive tree at 100k entries and sets truncated:true when
+    // it's incomplete. We can't list the whole tree then, but the affected files
+    // from the failure are fetched directly (not via this tree), so repair still
+    // works — we just log it so the partial padding is visible.
+    if (tree.data.truncated) {
+      logger.warn('Repo tree truncated by GitHub (very large repo); relying on affected files for context', {
+        repo: repository.full_name,
+      });
+    }
+
     // Return source files repo-wide (not just src/) so repos that keep code at
-    // the root or in lib/, app/, etc. are still repairable. Exclude tests,
-    // vendored/build output, and non-source paths.
-    const EXCLUDE = /(^|\/)(node_modules|dist|build|out|coverage|vendor|\.next|\.github|\.git)\//;
-    const TESTISH = /(^|\/)(tests?|__tests__|__mocks__|spec)\/|\.(test|spec)\.\w+$|(^|\/)test\.\w+$/i;
-    const SRC_EXT = /\.(js|jsx|ts|tsx|py|rb|go|rs|java|php|c|cpp|cs)$/;
+    // the root or in lib/, app/, etc. are still repairable. Language detection
+    // is derived from GitHub Linguist (see utils/sourceDetection) so every
+    // language GitHub recognizes is covered, not a hardcoded ~13-extension list.
+    // isSourceFile already excludes tests, vendored/build output, generated
+    // artifacts, and binaries.
     return tree.data.tree
-      .filter(f => f.type === 'blob'
-        && SRC_EXT.test(f.path)
-        && !EXCLUDE.test(f.path)
-        && !TESTISH.test(f.path))
+      .filter(f => f.type === 'blob' && isSourceFile(f.path))
       // Prefer shallower paths (more likely to be the entrypoint with the bug).
       .sort((a, b) => a.path.split('/').length - b.path.split('/').length)
       .map(f => f.path)

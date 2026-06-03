@@ -5,7 +5,9 @@ const assert = require('assert');
 const { classifyActionability } = require('../src/agents/actionability');
 const { dedupDecision } = require('../src/agents/prDedup');
 const { computeConfidence } = require('../src/agents/confidenceEngine');
-const { validatePatchSafety, recoverBareFileRewrite } = require('../src/agents/patchGenerator');
+const {
+  validatePatchSafety, recoverBareFileRewrite, parseFileBlocks, stripContentFence,
+} = require('../src/agents/patchGenerator');
 
 let pass = 0, fail = 0;
 function check(name, fn) {
@@ -220,6 +222,44 @@ check('recovered block passes the existing scope/safety guard', () => {
   const patch = blocks([recoverBareFileRewrite(PY_FIXED, srcFiles)]);
   const r = validatePatchSafety(patch, { knownFiles: Object.keys(srcFiles), sourceFiles: srcFiles });
   assert.strictEqual(r.safe, true);
+});
+
+console.log('\n== parseFileBlocks: markdown fence INSIDE the ===FILE=== block (real prod bug) ==');
+
+// Real prod failure (warpfix-python-e2e run 26879086701): the model emitted the
+// fix inside a ```python fence within the FILE block and only the OPENING fence
+// reached us (the closing ``` landed after ===END_FILE===). The fence used to
+// survive as line 1 of the written file -> Python "SyntaxError: invalid syntax"
+// even though the fix (< -> <=) was correct, so the verified sandbox failed.
+check('opening-only ```python fence inside FILE block is stripped', () => {
+  const out = '===FILE: src/intervals.py===\n```python\n' + PY_FIXED + '\n===END_FILE===\n```';
+  const fb = parseFileBlocks(out);
+  assert.strictEqual(fb.length, 1);
+  assert.strictEqual(fb[0].path, 'src/intervals.py');
+  assert.ok(!fb[0].content.startsWith('```'), 'leading fence must be stripped');
+  assert.ok(/start <= last\[1\]/.test(fb[0].content), 'fix is preserved');
+});
+
+check('matched ```python ... ``` fence inside FILE block is stripped', () => {
+  const out = '===FILE: src/intervals.py===\n```python\n' + PY_FIXED + '\n```\n===END_FILE===';
+  const fb = parseFileBlocks(out);
+  assert.strictEqual(fb.length, 1);
+  assert.ok(!fb[0].content.startsWith('```') && !fb[0].content.endsWith('```'));
+  assert.ok(/start <= last\[1\]/.test(fb[0].content));
+});
+
+check('FILE block without any fence is left untouched', () => {
+  const out = '===FILE: src/intervals.py===\n' + PY_FIXED + '\n===END_FILE===';
+  const fb = parseFileBlocks(out);
+  assert.strictEqual(fb.length, 1);
+  assert.strictEqual(fb[0].content.trim(), PY_FIXED.trim());
+});
+
+check('stripContentFence handles leading-only, trailing-only, both, and none', () => {
+  assert.strictEqual(stripContentFence('```js\nconst a = 1;'), 'const a = 1;');
+  assert.strictEqual(stripContentFence('const a = 1;\n```'), 'const a = 1;');
+  assert.strictEqual(stripContentFence('```\nconst a = 1;\n```'), 'const a = 1;');
+  assert.strictEqual(stripContentFence('const a = 1;'), 'const a = 1;');
 });
 
 console.log(`\n==== ${pass} passed, ${fail} failed ====\n`);

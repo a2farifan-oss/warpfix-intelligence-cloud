@@ -354,9 +354,8 @@ function parseFileBlocks(llmOutput) {
 // verify the result, so a wrong guess is rejected rather than shipped.
 function recoverBareFileRewrite(llmOutput, sourceFiles = {}) {
   if (!llmOutput) return null;
-  let text = llmOutput.trim();
-  const fence = text.match(/^```[\w-]*\n([\s\S]*?)\n```$/);
-  if (fence) text = fence[1].trim();
+  // Strip a leading/trailing markdown fence (handles opening-only fences too).
+  let text = stripContentFence(llmOutput.trim());
   // If proper FILE markers exist, this isn't the bare-rewrite case.
   if (!text || /===\s*FILE\s*:/i.test(text)) return null;
 
@@ -384,10 +383,18 @@ function recoverBareFileRewrite(llmOutput, sourceFiles = {}) {
   return { path: best.path, content: text };
 }
 
-// Remove a leading/trailing ```lang ... ``` fence around file content if present.
+// Remove a markdown ```lang ... ``` fence around file content if present.
+// Models sometimes wrap the file body in a fence INSIDE the ===FILE=== block,
+// and frequently emit only the OPENING fence (the closing ``` lands after
+// ===END_FILE===, so it never reaches us) — which left a literal "```python"
+// as line 1 of the written file and broke the source (e.g. Python SyntaxError).
+// So strip a leading fence line and a trailing fence line independently rather
+// than requiring a matched pair. Real source files never start/end with ```.
 function stripContentFence(content) {
-  const m = content.match(/^```[\w-]*\n([\s\S]*?)\n?```$/);
-  return m ? m[1].trim() : content;
+  let t = content;
+  t = t.replace(/^```[\w-]*[ \t]*\r?\n/, '');
+  t = t.replace(/\r?\n```[ \t]*$/, '');
+  return t.trim();
 }
 
 function extractDiff(llmOutput) {

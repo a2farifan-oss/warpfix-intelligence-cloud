@@ -1,7 +1,7 @@
 const { logger } = require('../utils/logger');
 const { callLLM } = require('../services/llm');
 const { getFewShotBlock } = require('./retrieval');
-const { isSourceFile, isFetchableAffectedFile, dominantLanguage } = require('../utils/sourceDetection');
+const { isSourceFile, isFetchableAffectedFile, dominantLanguage, isTestPath, isBuildFile } = require('../utils/sourceDetection');
 
 const PATCH_SAFETY_RULES = {
   maxDiffLines: 200,
@@ -71,7 +71,13 @@ async function generatePatch({ logData, classification, repository, context, ins
     // still pull from the repo tree. So only non-test affected files count as a
     // "known bug location"; otherwise fall back to the full padding budget.
     const maxFiles = parseInt(process.env.PATCH_MAX_FILES, 10) || 4;
-    const knownBugFiles = affected.filter(f => !TEST_PATH.test(f)).length;
+    // A "known bug location" is an affected file that is genuinely fixable
+    // source — NOT a test (incl. JVM FooTest.kt naming) and NOT a non-source
+    // artifact (e.g. a gradle "tests/test/index.html" report path the parser
+    // scraped). Counting tests/artifacts here used to shrink the fetch budget
+    // to ~2 and, combined with those entries being unfetchable, starved the
+    // real source file (Intervals.kt) out of context entirely.
+    const knownBugFiles = affected.filter(f => isSourceFile(f) && !isTestPath(f)).length;
     const fetchCount = knownBugFiles > 0
       ? Math.min(maxFiles, Math.max(knownBugFiles, parseInt(process.env.PATCH_MAX_FILES_AFFECTED, 10) || 2))
       : maxFiles;
@@ -199,11 +205,14 @@ async function fetchRepoSourceTree(repository, installationId, ref) {
     return tree.data.tree
       .filter(f => f.type === 'blob' && isSourceFile(f.path))
       .sort((a, b) => {
-        // Real code before docs/markup: bugs live in source, not READMEs, so a
-        // doc file must never crowd a code file out of the (capped) context.
-        const ad = DOC_EXT.test(a.path) ? 1 : 0;
-        const bd = DOC_EXT.test(b.path) ? 1 : 0;
-        if (ad !== bd) return ad - bd;
+        // Application code before build/packaging wrappers and docs: bugs live
+        // in source, not in build.gradle.kts/gradlew/pom.xml or READMEs. Those
+        // sit at the repo root (depth 1) so without this they'd outrank the
+        // actual src/.../Foo.kt (deep) and crowd it out of the capped context.
+        const rank = (p) => (DOC_EXT.test(p) ? 2 : isBuildFile(p) ? 1 : 0);
+        const ra = rank(a.path);
+        const rb = rank(b.path);
+        if (ra !== rb) return ra - rb;
         // Then prefer shallower paths (more likely to be the entrypoint).
         return a.path.split('/').length - b.path.split('/').length;
       })

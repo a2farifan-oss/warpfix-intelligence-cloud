@@ -82,41 +82,6 @@ async function callGroq({ system, user, maxTokens }) {
   return sanitizeLLMText(text);
 }
 
-async function callPageGrid({ system, user, maxTokens }) {
-  const apiKey = process.env.PAGEGRID_API_KEY;
-  const apiUrl = process.env.PAGEGRID_API_URL || 'https://api.pagegrid.in';
-  const model = process.env.PAGEGRID_MODEL || 'claude-sonnet-4-6';
-
-  const response = await fetch(`${apiUrl}/v1/messages`, {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model,
-      system,
-      messages: [
-        { role: 'user', content: user },
-      ],
-      max_tokens: maxTokens,
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    logger.error('LLM API error', { provider: 'pagegrid', status: response.status, error });
-    throw new Error(`LLM API error: ${response.status} - ${error}`);
-  }
-
-  const data = await response.json();
-  const text = data.content?.[0]?.text || '';
-  if (!text) {
-    logger.warn('LLM returned empty response', { provider: 'pagegrid', data });
-  }
-  return text;
-}
-
 // GitHub Models (https://models.github.ai/inference) is OpenAI-compatible and
 // free with a GitHub token — used as a fallback so a single provider's daily
 // cap can't stall repairs. Default model gpt-4o-mini is strong at code fixes.
@@ -177,11 +142,10 @@ function isDailyLimit(errMessage) {
   return /tokens per day|\bTPD\b|per day|per 86400/i.test(errMessage || '');
 }
 
-const PROVIDER_FNS = { groq: callGroq, pagegrid: callPageGrid, github: callGitHubModels };
+const PROVIDER_FNS = { groq: callGroq, github: callGitHubModels };
 
 function providerHasKey(provider) {
   if (provider === 'groq') return !!process.env.GROQ_API_KEY;
-  if (provider === 'pagegrid') return !!process.env.PAGEGRID_API_KEY;
   if (provider === 'github') return !!(process.env.GITHUB_MODELS_TOKEN || process.env.GITHUB_TOKEN);
   return false;
 }
@@ -217,7 +181,7 @@ async function callOneProvider(provider, { system, user, maxTokens }) {
 // Each provider is tried in order; a daily cap (or hard failure) on one falls
 // through to the next free provider so repairs keep working at $0.
 async function callLLM({ system, user, maxTokens = 2000 }) {
-  const defaultChain = process.env.GROQ_API_KEY ? 'groq' : 'pagegrid';
+  const defaultChain = process.env.GROQ_API_KEY ? 'groq' : 'github';
   const chain = (process.env.LLM_PROVIDER || defaultChain)
     .toLowerCase()
     .split(',')

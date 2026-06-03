@@ -1,4 +1,5 @@
 const { logger } = require('../utils/logger');
+const { SOURCE_EXTS, isExcludedPath } = require('../utils/sourceDetection');
 
 async function parseLog({ type, repository, workflow_run, installation_id, context }) {
   logger.info('Parsing logs', { type, repo: repository?.full_name });
@@ -104,20 +105,30 @@ function extractError(rawLog) {
   }
   const stackTrace = stackLines.join('\n').slice(0, 2000);
 
-  // affectedFiles: source files referenced in the stack/error (skip node_modules
-  // and absolute runner paths outside the repo checkout).
-  const fileRe = /([\w./-]+\.(?:js|jsx|ts|tsx|py|go|rb|java|rs|c|cpp|cs|php)):\d+/g;
+  // affectedFiles: files referenced in the stack/error. Language-agnostic: we
+  // capture any path-like token that ends in an extension and is EITHER followed
+  // by a location marker (":42", ":42:7", "(42,7)", ":line 42", ", line 42" —
+  // covers JS/Py/Go/Rust/C/C++/Swift/Kotlin/C#/Java) OR has a known source
+  // extension from GitHub Linguist. This way a file in any language is captured,
+  // without matching arbitrary dotted names like `com.foo.Bar` or `react.min`.
+  const fileRe = /(\/?[A-Za-z0-9_][A-Za-z0-9_./\\-]*\.[A-Za-z0-9_]+)(:\d+|\(\d+|:line\s+\d+|,\s*line\s+\d+)?/g;
   const files = new Set();
   const scanText = `${errorMessage}\n${stackTrace}`;
   void firstIdx;
   let m;
   while ((m = fileRe.exec(scanText)) !== null) {
-    let p = m[1];
-    if (/node_modules|node:internal|\/usr\/|\.cache\//.test(p)) continue;
+    let p = m[1].replace(/\\/g, '/');
+    const hasLocation = !!m[2];
+    if (/node_modules|node:internal|\/usr\/|\.cache\/|site-packages|dist-packages/.test(p)) continue;
     // GitHub Actions checks the repo out at /home/runner/work/<repo>/<repo>/.
     p = p.replace(/^\/home\/runner\/work\/[^/]+\/[^/]+\//, '');
     // Any other absolute prefix up to a recognizable source dir.
-    p = p.replace(/^.*?\/((?:src|test|tests|lib|app|cmd|pkg)\/)/, '$1').replace(/^\.\//, '');
+    p = p.replace(/^.*?\/((?:src|test|tests|lib|app|cmd|pkg|internal|main)\/)/, '$1').replace(/^\.\//, '');
+    const ext = p.includes('.') ? `.${p.split('.').pop().toLowerCase()}` : '';
+    // Require a real signal: an explicit line/location marker, or a recognized
+    // source extension. Skip excluded/generated/binary paths.
+    if (!hasLocation && !SOURCE_EXTS.has(ext)) continue;
+    if (isExcludedPath(p)) continue;
     files.add(p);
   }
 

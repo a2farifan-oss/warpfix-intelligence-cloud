@@ -63,7 +63,7 @@ function run(cmd, args, opts = {}) {
   return new Promise((resolve) => {
     const child = spawn(cmd, args, {
       cwd: opts.cwd,
-      env: { ...process.env, CI: 'true', npm_config_yes: 'true' },
+      env: { ...process.env, CI: 'true', npm_config_yes: 'true', ...(opts.env || {}) },
       timeout: opts.timeout || 120000,
     });
     let out = '';
@@ -247,14 +247,28 @@ async function runProjectTests(dir, steps) {
   }
 
   // ---- Java / Maven / Gradle ----
+  // Bound the JVM footprint: Gradle's *default* daemon heap is -Xmx512m and a
+  // build spawns several JVMs (wrapper launcher + build daemon + forked test
+  // worker), so an uncapped `./gradlew test` can use far more memory than a
+  // small instance has and OOM-kill the worker mid-sandbox. JAVA_TOOL_OPTIONS
+  // is honoured by *every* JVM the build forks, so it caps heap + metaspace +
+  // code-cache uniformly; GRADLE_OPTS disables the daemon, serializes workers,
+  // and runs the Kotlin compiler in-process (one fewer JVM). NOTE: a clean
+  // Kotlin/Gradle build still needs ~0.5GB+ even tuned this hard, so verified
+  // JVM repairs require a worker plan with enough RAM (≳1GB).
+  const JVM_SHRINK = '-Xmx256m -XX:+UseSerialGC -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=48m -XX:TieredStopAtLevel=1 -Xss640k';
+  const JVM_ENV = {
+    JAVA_TOOL_OPTIONS: JVM_SHRINK,
+    GRADLE_OPTS: '-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=1 -Dkotlin.compiler.execution.strategy=in-process',
+  };
   if (has('pom.xml')) {
-    const test = await run('mvn', ['-q', 'test'], { cwd: dir, timeout: 300000 });
+    const test = await run('mvn', ['-q', 'test'], { cwd: dir, timeout: 300000, env: JVM_ENV });
     if (toolchainMissing(test)) return null;
     steps.install = true; steps.test = test.code === 0;
     return { passed: test.code === 0, language: 'maven', output: test.out };
   }
   if (has('build.gradle') || has('build.gradle.kts')) {
-    const test = await run('./gradlew', ['test', '--quiet'], { cwd: dir, timeout: 300000 });
+    const test = await run('./gradlew', ['test', '--no-daemon', '--quiet'], { cwd: dir, timeout: 300000, env: JVM_ENV });
     if (toolchainMissing(test)) return null;
     steps.install = true; steps.test = test.code === 0;
     return { passed: test.code === 0, language: 'gradle', output: test.out };

@@ -16,7 +16,7 @@ const { inspectExistingWarpfixPRs, dedupDecision } = require('../agents/prDedup'
 const { acquireRepairLock, releaseRepairLock, checkRepoDailyCap } = require('./guards');
 const { postInfraDiagnostic } = require('../agents/diagnostics');
 const { validateInSandbox } = require('../agents/sandboxValidator');
-const { computeConfidence } = require('../agents/confidenceEngine');
+const { computeConfidence, shouldAutoOpenPR } = require('../agents/confidenceEngine');
 const { createPullRequest } = require('../agents/pullRequestAgent');
 const { recordTelemetry } = require('../services/telemetry');
 const { getInstallationOctokit } = require('../services/github');
@@ -300,10 +300,16 @@ async function processRepairJob(job) {
       }
     }
 
-    // Step 9: Create PR if confidence is sufficient
+    // Step 9: Create PR ONLY for a VERIFIED fix (sandbox ran the real tests and
+    // they passed) that also clears the score gate. An unverified/lightweight
+    // pass never opens a PR — that path produced 137 opened PRs with 0 merges.
     let prUrl = null;
     let prNumber = null;
-    if (confidence.score >= 40 && sandboxResult.passed) {
+    if (shouldAutoOpenPR({
+      score: confidence.score,
+      sandboxPassed: sandboxResult.passed,
+      sandboxVerified: sandboxResult.verified,
+    })) {
       job.updateProgress(90);
       const prResult = await createPullRequest({
         patch,

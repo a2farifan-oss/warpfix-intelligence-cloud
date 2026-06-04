@@ -61,4 +61,16 @@ function computeConfidence({ sandboxPassed, sandboxVerified, patchSize, fingerpr
   };
 }
 
-module.exports = { computeConfidence };
+// The auto-PR gate. A repair PR may ONLY be opened when the sandbox actually RAN
+// the repo's real test suite (verified) AND it passed. A lightweight/structural
+// pass (unverified — no test runner for the language, or the toolchain was
+// unavailable) is NOT sufficient: shipping unverified "fixes" is precisely what
+// produced 137 opened PRs with 0 merges. Gating on `passed` alone let an
+// unverified patch clear the bar whenever bonuses (fingerprint reuse, small
+// patch, classification) pushed the numeric score >= 40. Requiring `verified`
+// makes "we actually proved the tests pass" the permanent, non-bypassable bar.
+function shouldAutoOpenPR({ score, sandboxPassed, sandboxVerified }) {
+  return !!(sandboxPassed && sandboxVerified && score >= 40);
+}
+
+module.exports = { computeConfidence, shouldAutoOpenPR };

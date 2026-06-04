@@ -113,6 +113,39 @@ async function main() {
     assert.strictEqual(patchToFileMap(null), null);
   });
 
+  console.log('\n== auto-PR gate is VERIFIED-only (the 137-unverified-PR regression) ==');
+  const { shouldAutoOpenPR, computeConfidence } = require('../src/agents/confidenceEngine');
+
+  check('verified pass at score>=40 opens a PR (Python/Node happy path)', () => {
+    assert.strictEqual(shouldAutoOpenPR({ score: 65, sandboxPassed: true, sandboxVerified: true }), true);
+    assert.strictEqual(shouldAutoOpenPR({ score: 40, sandboxPassed: true, sandboxVerified: true }), true);
+  });
+
+  check('UNVERIFIED pass NEVER opens a PR, even at high score (Swift/Kotlin/structural)', () => {
+    // This is exactly how 137 PRs opened: bonuses pushed an unverified patch >= 40.
+    assert.strictEqual(shouldAutoOpenPR({ score: 70, sandboxPassed: true, sandboxVerified: false }), false);
+    assert.strictEqual(shouldAutoOpenPR({ score: 95, sandboxPassed: true, sandboxVerified: false }), false);
+  });
+
+  check('a failing sandbox never opens a PR regardless of score/verified', () => {
+    assert.strictEqual(shouldAutoOpenPR({ score: 90, sandboxPassed: false, sandboxVerified: true }), false);
+    assert.strictEqual(shouldAutoOpenPR({ score: 90, sandboxPassed: false, sandboxVerified: false }), false);
+  });
+
+  check('verified pass below the score gate (39) does not open a PR', () => {
+    assert.strictEqual(shouldAutoOpenPR({ score: 39, sandboxPassed: true, sandboxVerified: true }), false);
+  });
+
+  check('an unverified fix can still numerically reach >=40 (proves the gate is what protects us)', () => {
+    // sandbox(unverified)=20 + fingerprint=25 = 45 >= 40, but unverified => no PR.
+    const c = computeConfidence({
+      sandboxPassed: true, sandboxVerified: false, patchSize: 9000,
+      fingerprintReuse: true, classification: { confidence: 0.3, severity: 'medium' },
+    });
+    assert.ok(c.score >= 40, `expected unverified score >=40, got ${c.score}`);
+    assert.strictEqual(shouldAutoOpenPR({ score: c.score, sandboxPassed: true, sandboxVerified: false }), false);
+  });
+
   console.log('\n== octokit throttling config constructs cleanly ==');
   check('Octokit accepts throttle handlers (secondary-rate-limit guard)', () => {
     const { Octokit } = require('octokit');

@@ -33,9 +33,30 @@ function getFileBlocks(patch) {
   return [];
 }
 
+// Natural-language "blind fix" phrases a model emits when it was given NO real
+// source (only the test, or nothing) and is guessing. These are not fixes —
+// they're prose stubs like "// This is a placeholder since I cannot see the
+// actual source file" or "// implementation would be here". They must never be
+// stored as a real patch or shipped. Patterns are intentionally specific to the
+// model's stock phrasing so legitimate source (e.g. a UI `placeholder="Email"`
+// attribute, or "// TODO: placeholder for analytics") is NOT misflagged.
+const BLIND_PLACEHOLDER_PATTERNS = [
+  /\bplaceholder\b[^.\n]{0,30}\bsince\b/i, // "placeholder since ..."
+  /\bimplementation would (?:be|go) here\b/i,
+  /\b(?:actual|real)\s+(?:source|implementation)\s+(?:file\s+)?(?:would|will|wasn'?t|was not|isn'?t|is not|can'?t|cannot)\b/i,
+  /\b(?:can(?:'|no)?t|cannot|could ?n(?:'|o)?t|do(?:n'?| no)t|did ?n(?:'|o)?t|wasn'?t|was not|isn'?t|is not)\b[^.\n]{0,40}\b(?:see|have|access|provided|given)\b[^.\n]{0,40}\b(?:actual\s+)?(?:source|implementation|file)\b/i,
+  /\bsince\b[^.\n]{0,30}\b(?:source|implementation|file)\b[^.\n]{0,30}\b(?:wasn'?t|was not|isn'?t|is not|wasn'?t|not)\b[^.\n]{0,20}\b(?:provided|given|available|shown)\b/i,
+];
+
+function looksLikeBlindPlaceholder(text) {
+  if (!text || typeof text !== 'string') return false;
+  return BLIND_PLACEHOLDER_PATTERNS.some((re) => re.test(text));
+}
+
 // Detects patches that are just the prompt's example placeholder (the classic
 // "path/to/file.js" / "(complete new file content here)" that the LLM echoes
-// back when it has no real input), or otherwise empty/degenerate.
+// back when it has no real input), a natural-language "blind fix" stub the
+// model emits when it had no source to work from, or otherwise empty/degenerate.
 function isPlaceholderPatch(patch) {
   if (!patch || typeof patch !== 'string' || !patch.trim()) return true;
 
@@ -50,6 +71,7 @@ function isPlaceholderPatch(patch) {
       if (!p || !c) return true;
       if (PLACEHOLDER_PATH.test(p)) return true;
       if (PLACEHOLDER_CONTENT.test(c)) return true;
+      if (looksLikeBlindPlaceholder(c)) return true;
     }
     return false;
   }
@@ -57,6 +79,7 @@ function isPlaceholderPatch(patch) {
   // Diff / plain-text patch
   if (PLACEHOLDER_CONTENT.test(patch)) return true;
   if (/[+-]{3}\s+[ab]\/path\/to\/file/i.test(patch)) return true;
+  if (looksLikeBlindPlaceholder(patch)) return true;
   return false;
 }
 
@@ -104,6 +127,7 @@ async function patchAppliesToRepo(patch, repository, installationId) {
 module.exports = {
   isUnparseable,
   isPlaceholderPatch,
+  looksLikeBlindPlaceholder,
   patchAppliesToRepo,
   getFileBlocks,
   PARSE_FAILURE_SENTINELS,

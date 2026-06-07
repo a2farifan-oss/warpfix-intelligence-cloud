@@ -1,7 +1,7 @@
 const { logger } = require('../utils/logger');
 const { callLLM } = require('../services/llm');
 const { getFewShotBlock } = require('./retrieval');
-const { isSourceFile, isFetchableAffectedFile, dominantLanguage } = require('../utils/sourceDetection');
+const { isSourceFile, isFetchableAffectedFile, dominantLanguage, isTestPath, isBuildFile, resolveImportedSourceFiles } = require('../utils/sourceDetection');
 
 const PATCH_SAFETY_RULES = {
   maxDiffLines: 200,
@@ -64,6 +64,38 @@ async function generatePatch({ logData, classification, repository, context, ins
       if (!filesToFetch.includes(f)) filesToFetch.push(f);
     }
     for (const f of affected) knownFiles.add(f);
+
+    // Source-under-test resolution. A test_failure usually names only the TEST
+    // in its stack trace, not the source it exercises. Feeding the model just
+    // the test starves it of the real code: it emits a placeholder, or rewrites
+    // the right file from memory as bare content the recovery can't attribute
+    // (the file isn't in context) → stored unparseable → sandbox can't run →
+    // UNVERIFIED → no PR. So when affected files include tests, fetch those
+    // tests, parse their local imports, and resolve them back to repo source
+    // paths. Those resolved sources are pulled into context with priority.
+    const affectedTests = affected.filter(isTestPath);
+    let importedSources = [];
+    if (affectedTests.length) {
+      const testContents = await fetchSourceFiles(affectedTests, repository, installation_id, ref, affectedTests.length);
+      importedSources = resolveImportedSourceFiles({
+        testFiles: Object.keys(testContents),
+        testContents,
+        repoFiles: Array.from(knownFiles),
+      });
+      // Front-load the resolved source-under-test so the capped fetch budget
+      // always includes it (ahead of arbitrary repo-tree padding).
+      for (const s of [...importedSources].reverse()) {
+        const i = filesToFetch.indexOf(s);
+        if (i > 0) filesToFetch.splice(i, 1);
+        if (i !== 0) filesToFetch.unshift(s);
+      }
+      if (importedSources.length) {
+        logger.info('Resolved source-under-test from failing test imports', {
+          repo: repository?.full_name, tests: affectedTests, sources: importedSources,
+        });
+      }
+    }
+
     // When we already know which SOURCE file holds the bug we don't need to pad
     // with as much repo context. But a failure whose only named files are TESTS
     // (e.g. a pytest assertion that points at the test, not the code under test)
@@ -71,9 +103,19 @@ async function generatePatch({ logData, classification, repository, context, ins
     // still pull from the repo tree. So only non-test affected files count as a
     // "known bug location"; otherwise fall back to the full padding budget.
     const maxFiles = parseInt(process.env.PATCH_MAX_FILES, 10) || 4;
-    const knownBugFiles = affected.filter(f => !TEST_PATH.test(f)).length;
+    // A "known bug location" is an affected file that is genuinely fixable
+    // source — NOT a test (incl. JVM FooTest.kt naming) and NOT a non-source
+    // artifact (e.g. a gradle "tests/test/index.html" report path the parser
+    // scraped). Counting tests/artifacts here used to shrink the fetch budget
+    // to ~2 and, combined with those entries being unfetchable, starved the
+    // real source file (Intervals.kt) out of context entirely. Imported
+    // source-under-test counts too — it IS the bug location for a test_failure.
+    const knownBugFiles = affected.filter(f => isSourceFile(f) && !isTestPath(f)).length + importedSources.length;
+    // Always reserve room for the resolved source(s) PLUS the test that named
+    // them, so neither is starved out of the capped fetch window.
+    const reserve = importedSources.length + Math.min(affectedTests.length, 1);
     const fetchCount = knownBugFiles > 0
-      ? Math.min(maxFiles, Math.max(knownBugFiles, parseInt(process.env.PATCH_MAX_FILES_AFFECTED, 10) || 2))
+      ? Math.min(maxFiles, Math.max(knownBugFiles, reserve, parseInt(process.env.PATCH_MAX_FILES_AFFECTED, 10) || 2))
       : maxFiles;
     sourceFiles = await fetchSourceFiles(filesToFetch.slice(0, fetchCount), repository, installation_id, ref, fetchCount);
     for (const f of Object.keys(sourceFiles)) knownFiles.add(f);
@@ -199,11 +241,14 @@ async function fetchRepoSourceTree(repository, installationId, ref) {
     return tree.data.tree
       .filter(f => f.type === 'blob' && isSourceFile(f.path))
       .sort((a, b) => {
-        // Real code before docs/markup: bugs live in source, not READMEs, so a
-        // doc file must never crowd a code file out of the (capped) context.
-        const ad = DOC_EXT.test(a.path) ? 1 : 0;
-        const bd = DOC_EXT.test(b.path) ? 1 : 0;
-        if (ad !== bd) return ad - bd;
+        // Application code before build/packaging wrappers and docs: bugs live
+        // in source, not in build.gradle.kts/gradlew/pom.xml or READMEs. Those
+        // sit at the repo root (depth 1) so without this they'd outrank the
+        // actual src/.../Foo.kt (deep) and crowd it out of the capped context.
+        const rank = (p) => (DOC_EXT.test(p) ? 2 : isBuildFile(p) ? 1 : 0);
+        const ra = rank(a.path);
+        const rb = rank(b.path);
+        if (ra !== rb) return ra - rb;
         // Then prefer shallower paths (more likely to be the entrypoint).
         return a.path.split('/').length - b.path.split('/').length;
       })

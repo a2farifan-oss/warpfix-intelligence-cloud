@@ -20,6 +20,8 @@ async function validateInSandbox({ patch, repository, installation_id, workflow_
       if (real) {
         logger.info('Sandbox executed full test suite', {
           repo: repository?.full_name, passed: real.passed,
+          language: real.language,
+          outputTail: real.passed ? undefined : (real.output || '').slice(-700),
         });
         return real;
       }
@@ -61,7 +63,7 @@ function run(cmd, args, opts = {}) {
   return new Promise((resolve) => {
     const child = spawn(cmd, args, {
       cwd: opts.cwd,
-      env: { ...process.env, CI: 'true', npm_config_yes: 'true' },
+      env: { ...process.env, CI: 'true', npm_config_yes: 'true', ...(opts.env || {}) },
       timeout: opts.timeout || 120000,
     });
     let out = '';
@@ -135,11 +137,23 @@ async function executeValidate({ patch, repository, installation_id, workflow_ru
   }
 }
 
-// A spawn that couldn't find the binary resolves with code -1 and an ENOENT-ish
-// message — treat that as "toolchain unavailable" (fall back) rather than a
-// failing test.
+// Decide whether a tool run failed because the toolchain itself is unavailable
+// (so we should fall back to the unverified lightweight check) rather than
+// because the tests genuinely failed.
 function toolchainMissing(res) {
-  return res.code === -1 && /spawn error|ENOENT|not found/i.test(res.out || '');
+  const out = res.out || '';
+  // A spawn that couldn't find the binary resolves with code -1 and an
+  // ENOENT-ish message.
+  if (res.code === -1 && /spawn error|ENOENT|not found/i.test(out)) return true;
+  // A launcher script (./gradlew, mvn) can spawn fine yet abort with a non-zero
+  // exit when the underlying runtime is absent — e.g. gradlew prints "ERROR:
+  // JAVA_HOME is not set and no 'java' command could be found" and exits 1. That
+  // is a missing toolchain (fall back to the lightweight/unverified check), not
+  // a real failing test, so don't let it masquerade as a verified red run.
+  if (/JAVA_HOME is not set|no 'java' command could be found|Unable to locate a Java Runtime|command not found/i.test(out)) {
+    return true;
+  }
+  return false;
 }
 
 // Detect the ecosystem from marker files and run install + test with the right
@@ -233,14 +247,42 @@ async function runProjectTests(dir, steps) {
   }
 
   // ---- Java / Maven / Gradle ----
+  // A clean Kotlin/Gradle (or large Maven) build spawns several JVMs (wrapper
+  // launcher + build daemon + forked test worker) and needs ~0.5GB+ of memory
+  // even with aggressive heap/metaspace caps. On a memory-constrained worker
+  // that exceeds the instance's RAM and OOM-kills the whole process mid-build,
+  // taking down unrelated (Python/Node) repairs too. So the heavy JVM build is
+  // OPT-IN: it only runs when SANDBOX_JVM_HEAVY=1, which must only be set on a
+  // worker with enough RAM (≳1GB). When it's disabled we return null so JVM
+  // repairs fall back to the lightweight (unverified) check — a fix is still
+  // generated, it just won't open an auto-PR (the confidence gate keeps
+  // unverified fixes from shipping), which is the intended safe behavior on
+  // small plans.
+  const jvmHeavyEnabled = process.env.SANDBOX_JVM_HEAVY === '1';
+  const hasJvmProject = has('pom.xml') || has('build.gradle') || has('build.gradle.kts');
+  if (hasJvmProject && !jvmHeavyEnabled) {
+    logger.info('Skipping verified JVM sandbox; SANDBOX_JVM_HEAVY not enabled (needs a worker with ≳1GB RAM). Falling back to unverified.', {
+      reason: 'jvm_heavy_disabled',
+    });
+    return null;
+  }
+  // Bound the JVM footprint when the heavy build *is* enabled: JAVA_TOOL_OPTIONS
+  // is honoured by *every* JVM the build forks, so it caps heap + metaspace +
+  // code-cache uniformly; GRADLE_OPTS disables the daemon, serializes workers,
+  // and runs the Kotlin compiler in-process (one fewer JVM).
+  const JVM_SHRINK = '-Xmx256m -XX:+UseSerialGC -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=48m -XX:TieredStopAtLevel=1 -Xss640k';
+  const JVM_ENV = {
+    JAVA_TOOL_OPTIONS: JVM_SHRINK,
+    GRADLE_OPTS: '-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=1 -Dkotlin.compiler.execution.strategy=in-process',
+  };
   if (has('pom.xml')) {
-    const test = await run('mvn', ['-q', 'test'], { cwd: dir, timeout: 300000 });
+    const test = await run('mvn', ['-q', 'test'], { cwd: dir, timeout: 300000, env: JVM_ENV });
     if (toolchainMissing(test)) return null;
     steps.install = true; steps.test = test.code === 0;
     return { passed: test.code === 0, language: 'maven', output: test.out };
   }
   if (has('build.gradle') || has('build.gradle.kts')) {
-    const test = await run('./gradlew', ['test', '--quiet'], { cwd: dir, timeout: 300000 });
+    const test = await run('./gradlew', ['test', '--no-daemon', '--quiet'], { cwd: dir, timeout: 300000, env: JVM_ENV });
     if (toolchainMissing(test)) return null;
     steps.install = true; steps.test = test.code === 0;
     return { passed: test.code === 0, language: 'gradle', output: test.out };
@@ -324,4 +366,4 @@ async function dockerValidate(patch, repository, installationId) {
   };
 }
 
-module.exports = { validateInSandbox };
+module.exports = { validateInSandbox, toolchainMissing };

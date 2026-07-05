@@ -74,11 +74,21 @@ export function ToolFooter() {
           <Image src="/icons/icon-192.png" alt="WarpFix" width={16} height={16} />
           <span>&copy; {new Date().getFullYear()} WarpFix. Free tool — no signup required.</span>
         </div>
-        <div className="flex items-center gap-4 text-[11px] text-[var(--text-tertiary)]">
-          <Link href="/tools" className="hover:text-[var(--text-secondary)] transition-colors">All Tools</Link>
-          <Link href="/privacy" className="hover:text-[var(--text-secondary)] transition-colors">Privacy</Link>
-          <Link href="/terms" className="hover:text-[var(--text-secondary)] transition-colors">Terms</Link>
-        </div>
+          <div className="flex flex-col items-center gap-3 md:items-end">
+            <a href="https://getlaunchpod.com/product/warpfix" className="inline-flex">
+              <img
+                src="https://getlaunchpod.com/badge/warpfix"
+                alt="Featured on GetLaunchPod"
+                className="h-8 w-auto"
+                loading="lazy"
+              />
+            </a>
+            <div className="flex items-center gap-4 text-[11px] text-[var(--text-tertiary)]">
+              <Link href="/tools" className="hover:text-[var(--text-secondary)] transition-colors">All Tools</Link>
+              <Link href="/privacy" className="hover:text-[var(--text-secondary)] transition-colors">Privacy</Link>
+              <Link href="/terms" className="hover:text-[var(--text-secondary)] transition-colors">Terms</Link>
+            </div>
+          </div>
       </div>
     </footer>
   );

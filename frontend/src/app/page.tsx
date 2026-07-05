@@ -1128,11 +1128,21 @@ engines: 12`}
           </div>
           <div className="pt-6 border-t border-[var(--border-default)] flex flex-col sm:flex-row items-center justify-between gap-4 text-[12px] text-[var(--text-tertiary)]">
             <span>&copy; {new Date().getFullYear()} WarpFix. All rights reserved.</span>
-            <div className="flex gap-4">
-              <Link href="/privacy" className="hover:text-[var(--text-secondary)] transition-colors">Privacy</Link>
-              <Link href="/terms" className="hover:text-[var(--text-secondary)] transition-colors">Terms</Link>
-              <Link href="/cookies" className="hover:text-[var(--text-secondary)] transition-colors">Cookies</Link>
-            </div>
+              <div className="flex flex-col items-center gap-3 sm:items-end">
+                <a href="https://getlaunchpod.com/product/warpfix" className="inline-flex">
+                  <img
+                    src="https://getlaunchpod.com/badge/warpfix"
+                    alt="Featured on GetLaunchPod"
+                    className="h-8 w-auto"
+                    loading="lazy"
+                  />
+                </a>
+                <div className="flex gap-4">
+                  <Link href="/privacy" className="hover:text-[var(--text-secondary)] transition-colors">Privacy</Link>
+                  <Link href="/terms" className="hover:text-[var(--text-secondary)] transition-colors">Terms</Link>
+                  <Link href="/cookies" className="hover:text-[var(--text-secondary)] transition-colors">Cookies</Link>
+                </div>
+              </div>
           </div>
         </div>
       </footer>
